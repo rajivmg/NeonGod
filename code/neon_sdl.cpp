@@ -18,6 +18,7 @@
 
 // #include "neon_game.h"
 
+
 internal debug_read_file_result DEBUGReadFile(const char *Filename)
 {
 	debug_read_file_result Result = {};
