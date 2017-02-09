@@ -1,0 +1,6 @@
+.DS_store
+._.DS_store
+*.sln
+*.zip
+.vs/
+Debug/
