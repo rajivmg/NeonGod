@@ -1,2 +1,2 @@
 @echo off
-call devenv build/win32_neon.exe 
+call devenv \build\neon_sdl.exe 

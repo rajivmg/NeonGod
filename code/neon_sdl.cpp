@@ -204,9 +204,8 @@ int main(int argc, char **argv)
 							SDLProcessPendingEvents(Event, NewKeyboardController);
 						}
 					}
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-					GameUpdateAndRender(NewInput);
 
+					GameUpdateAndRender(NewInput);
 					SDL_GL_SwapWindow(MainApp.Window);
 
 					game_input *temp = NewInput;

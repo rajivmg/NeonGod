@@ -90,17 +90,18 @@ void rect_renderer::CreateGPUBuffer()
 {
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_DYNAMIC_DRAW);
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vp"), 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(ShaderProgram.AttribLoc("in_vp"));
 	// ...
 }
 
 void rect_renderer::UpdateGPUBuffer()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_DYNAMIC_DRAW);
 }
 
 void rect_renderer::SetShaderProgram(shader_program Program)
@@ -128,7 +129,7 @@ void rect_renderer::Draw()
 	glBindVertexArray(VAO);
 
 	glUseProgram(ShaderProgram.Program);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDrawArrays(GL_TRIANGLES, 0, RectBuffer.MemUsed / sizeof(rect) * 6);
 
 	ClearRectBuffer();
 }
@@ -138,4 +139,9 @@ void rect_renderer::ClearRectBuffer()
 	RectBuffer.Content = RectBuffer.Head;
 	RectBuffer.MemUsed = 0;
 	RectBuffer.MemAvailable = RECT_BUFFER_SIZE_MB;
+}
+
+void renderer::ClearWindowBuffers()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }

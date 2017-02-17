@@ -58,6 +58,8 @@ namespace renderer
 		void Draw();
 		void ClearRectBuffer();
 	};
+
+	void ClearWindowBuffers();
 }
 
 #endif
