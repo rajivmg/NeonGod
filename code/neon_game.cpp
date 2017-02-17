@@ -17,6 +17,9 @@ DrawRectangle(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRi
 	glEnd();
 }
 
+local_persist renderer::shader_program Shader;
+local_persist rect_renderer RectRenderer= {};
+
 internal void 
 GameUpdateAndRender(game_input *Input)
 {
@@ -33,6 +36,35 @@ GameUpdateAndRender(game_input *Input)
 			}
 		}
 	}
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	DrawRectangle(-0.5f, 0.5f, 0.5f, -0.5f);
+
+	local_persist b32 IsShaderCreated = 0;
+	if(!IsShaderCreated)
+	{
+		debug_read_file_result VShaderSource = DEBUGReadFile("v.txt");
+		debug_read_file_result FShaderSource = DEBUGReadFile("f.txt");
+
+		Shader.Sources(&VShaderSource, &FShaderSource);
+		IsShaderCreated = 1;
+	}
+
+
+	rect TestRect = {};
+	
+	GLfloat Vertex[18] = {-0.5f, 0.5f, 0.0f,
+					   -0.5f, -0.5f, 0.0f,
+						0.5f, 0.5f, 0.0f,
+
+						-0.5f, -0.5f, 0.0f,
+						0.5f, -0.5f, 0.0f,
+						0.5f, 0.5, 0.0f};
+	memcpy(TestRect.Vertex, Vertex, sizeof(Vertex));
+
+	RectRenderer.PushRect(&TestRect);
+	RectRenderer.PushRect(&TestRect);
+	RectRenderer.PushRect(&TestRect);
+	RectRenderer.SetShaderProgram(Shader);
+	RectRenderer.Draw();
+
+	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+	//DrawRectangle(-0.5f, 0.5f, 0.5f, -0.5f);
 }

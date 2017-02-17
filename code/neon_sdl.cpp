@@ -18,7 +18,6 @@
 
 // #include "neon_game.h"
 
-
 internal debug_read_file_result DEBUGReadFile(const char *Filename)
 {
 	debug_read_file_result Result = {};
@@ -168,10 +167,10 @@ int main(int argc, char **argv)
 				// debug_read_file_result Info = DEBUGReadFile("test.cpp");
 				// DEBUGWriteFile("test.copied", Info.ContentSize, Info.Content);
 				// DEBUGFreeFileMemory(Info.Content);
-				debug_read_file_result VShaderSource = DEBUGReadFile("v.txt");
-				debug_read_file_result FShaderSource = DEBUGReadFile("f.txt");
-				renderer::shader Shader;
-				Shader.Sources(&VShaderSource, &FShaderSource);
+				// debug_read_file_result VShaderSource = DEBUGReadFile("v.txt");
+				// debug_read_file_result FShaderSource = DEBUGReadFile("f.txt");
+				// renderer::shader Shader;
+				// Shader.Sources(&VShaderSource, &FShaderSource);
 
 				game_input Input[2] = {};
 				game_input *NewInput = &Input[0];
@@ -205,7 +204,7 @@ int main(int argc, char **argv)
 							SDLProcessPendingEvents(Event, NewKeyboardController);
 						}
 					}
-					
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 					GameUpdateAndRender(NewInput);
 
 					SDL_GL_SwapWindow(MainApp.Window);

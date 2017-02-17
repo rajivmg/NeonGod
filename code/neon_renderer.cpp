@@ -2,7 +2,7 @@
 
 using namespace renderer;
 
-void shader::Sources(debug_read_file_result *VsFile, debug_read_file_result *FsFile)
+void shader_program::Sources(debug_read_file_result *VsFile, debug_read_file_result *FsFile)
 {
 	Vs = glCreateShader(GL_VERTEX_SHADER);
 	Fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -11,7 +11,7 @@ void shader::Sources(debug_read_file_result *VsFile, debug_read_file_result *FsF
 	MakeProgram();
 }
 
-void shader::Compile(debug_read_file_result *VsFile, debug_read_file_result *FsFile)
+void shader_program::Compile(debug_read_file_result *VsFile, debug_read_file_result *FsFile)
 {
 	glShaderSource(Vs, 1, (GLchar * const *)(&VsFile->Content), (const GLint *)(&VsFile->ContentSize));
 	glShaderSource(Fs, 1, (GLchar * const *)(&FsFile->Content), (const GLint *)(&FsFile->ContentSize));
@@ -22,7 +22,7 @@ void shader::Compile(debug_read_file_result *VsFile, debug_read_file_result *FsF
 	// @TODO: Dump errors
 }
 
-void shader::MakeProgram()
+void shader_program::MakeProgram()
 {
 	Program = glCreateProgram();
 	glAttachShader(Program, Vs);
@@ -36,88 +36,106 @@ void shader::MakeProgram()
 
 	glDeleteShader(Vs);
 	glDeleteShader(Fs);
-
 }
 
-void shader::Use()
+GLuint shader_program::AttribLoc(char const * Attrib)
 {
-	glUseProgram(Program);
+	GLint Loc = glGetAttribLocation(Program, Attrib);
+	Assert(Loc!=-1);
+	return (GLuint)Loc;
 }
 
-void buffer_memory::Init()
+GLuint shader_program::UniformLoc(char const * Uniform)
 {
-	MemAvailable = RENDER_BUFFER_MEMORY_SIZE_MB; // In bytes
+	GLint Loc = glGetUniformLocation(Program, Uniform);
+	Assert(Loc != -1);
+	return (GLuint)Loc;
+}
+
+void rect_buffer::Init()
+{
+	MemAvailable = RECT_BUFFER_SIZE_MB; // In bytes
 	MemUsed 	 = 0;
-	Content 	 = malloc(RENDER_BUFFER_MEMORY_SIZE_MB);
+	Content 	 = malloc(RECT_BUFFER_SIZE_MB);
 	Head 		 = Content;
 	if(Content == 0)
 	{
+		Assert("AllocError");
 		// @TODO: exit(0); and show message
 	}
-	/*else
-	{
-		glGenBuffers(1, &VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, RENDER_BUFFER_MEMORY_SIZE_MB, 0, GL_DYNAMIC_DRAW);
-	}*/
 }
 
-void render_buffer::PushRect(rect const* Rect)
+void rect_renderer::PushRect(rect const * Rect)
 {
-	if(BufferMemory.Content == 0)
+	if(RectBuffer.Content == 0)
 	{
-		BufferMemory.Init();
+		RectBuffer.Init();
 	}
 	
-	if(BufferMemory.MemAvailable >= sizeof(rect))
+	if(RectBuffer.MemAvailable >= sizeof(rect))
 	{
-		memcpy(BufferMemory.Content, Rect, sizeof(rect));
-		BufferMemory.Content = (rect *)BufferMemory.Content + 1; // Move the pointer forward to point to unused memory
-		BufferMemory.MemAvailable -= sizeof(rect);
-		BufferMemory.MemUsed += sizeof(rect);
+		memcpy(RectBuffer.Content, Rect, sizeof(rect));
+		RectBuffer.Content = (rect *)RectBuffer.Content + 1; // Move the pointer forward to point to unused memory
+		RectBuffer.MemAvailable -= sizeof(rect);
+		RectBuffer.MemUsed += sizeof(rect);
 	}
 	else
 	{
+		Assert("NoMem");
 		// exit(0) and show message(Insufficient buffer memory size)
 	}
 }
 
-void render_buffer::CopyTOGPU()
+void rect_renderer::CreateGPUBuffer()
 {
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, BufferMemory.MemUsed, BufferMemory.Content, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_STATIC_DRAW);
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
-	//glVertexAttribPointer();
+	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vp"), 3, GL_FLOAT, GL_FALSE, 0, 0);
+	// ...
 }
 
-void render_buffer::SetShaderProgram(shader Shader)
+void rect_renderer::UpdateGPUBuffer()
 {
-	ShaderProgram = Shader.Program;
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_STATIC_DRAW);
 }
 
-void render_buffer::SetTextureMap()
+void rect_renderer::SetShaderProgram(shader_program Program)
+{
+	ShaderProgram = Program;
+}
+
+void rect_renderer::SetTextureMap()
 {
 
 }
 
-void render_buffer::Draw()
+void rect_renderer::Draw()
 {	
-	glUse(ShaderProgram;
-	glDrawElements(GL_TRIANGLES, , GL_USIGNED_BYTE, 
-	// glDrawArray()
+	if(!GPUBufferCreated)
+	{
+		CreateGPUBuffer();
+		GPUBufferCreated = 1;
+	}
+	else
+	{
+		UpdateGPUBuffer();
+	}
+	
+	glBindVertexArray(VAO);
 
-	// Clear ram memory buffer (MemAvailable = RENDER_BUFFER_SIZE)
-	// glBindVertexArray(0)
-	// glDeleteVertexArrays(VAO)
-	// glBindBuffer(0)
-	// glDeleteBuffer(VBO)
+	glUseProgram(ShaderProgram.Program);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	ClearRectBuffer();
 }
 
-void render_buffer::ClearBuffer()
+void rect_renderer::ClearRectBuffer()
 {
-	BufferMemory.Content = BufferMemory.Head;
-	BufferMemory.MemUsed = 0;
-	BufferMemory.MemAvailable = RENDER_BUFFER_MEMORY_SIZE_MB;
+	RectBuffer.Content = RectBuffer.Head;
+	RectBuffer.MemUsed = 0;
+	RectBuffer.MemAvailable = RECT_BUFFER_SIZE_MB;
 }

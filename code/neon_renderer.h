@@ -6,18 +6,18 @@
 
 namespace renderer
 {
-	struct rect
+	//GLfloat Content[90]; // 6x(XXXUUU) ... (X = xxx U= uu) = 15/vertex
+	union rect
 	{
-		GLfloat Content[12]; //VVUU
-		union
+		GLfloat Content[18];
+		struct
 		{
-			GLfloat Vertex[6];
-			GLfloat UV[6];
-			GLbyte	Indices[6];
-		};
+			GLfloat Vertex[18];
+			//GLfloat UV[12];
+		}; 
 	};
-	
-	struct buffer_memory
+
+	struct rect_buffer
 	{
 		void  Init();
 		u32   MemAvailable;
@@ -26,9 +26,9 @@ namespace renderer
 		void* Content;
 	};
 
-	local_persist buffer_memory BufferMemory = {};
+	local_persist rect_buffer RectBuffer = {};
 
-	struct shader
+	struct shader_program
 	{
 		GLuint Vs;
 		GLuint Fs;
@@ -37,28 +37,26 @@ namespace renderer
 		void Sources(debug_read_file_result *VsFile, debug_read_file_result *FsFile);
 		void Compile(debug_read_file_result *VsFile, debug_read_file_result *FsFile);
 		void MakeProgram();
-		void Use();
+		GLuint AttribLoc(char const * Attrib);
+		GLuint UniformLoc(char const * Uniform);
 	};
 
-	/**
-	 * @CHECK: @OPTIMIZE:
-	 *	Use one glBuffer and copy all rect info into
-	 * 	one memory block and use indexed draw()
-	 */
-	struct render_buffer
+	struct rect_renderer
 	{
-		GLuint	   VBO;
-		GLuint 	   VAO;
-		GLuint 	   ShaderProgram;
-		// texture_map *TextureMap;
-
-		local_persist 
+		GLuint	   		VBO;
+		GLuint 	   		VAO;
+		shader_program 	ShaderProgram;
+		u32		   		RectCount;	
+		b32 			GPUBufferCreated;
+		//texture_map 	*TextureMap;
 
 		void PushRect(rect const* Rect);
-		void CopyTOGPU();
-		void SetShaderProgram(shader Shader);
+		void CreateGPUBuffer();
+		void UpdateGPUBuffer();
+		void SetShaderProgram(shader_program Program);
 		void SetTextureMap();
 		void Draw();
+		void ClearRectBuffer();
 	};
 }
 
