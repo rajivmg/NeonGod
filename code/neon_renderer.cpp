@@ -104,7 +104,8 @@ void render_buffer::SetTextureMap()
 
 void render_buffer::Draw()
 {	
-	// glUse() Shader
+	glUse(ShaderProgram;
+	glDrawElements(GL_TRIANGLES, , GL_USIGNED_BYTE, 
 	// glDrawArray()
 
 	// Clear ram memory buffer (MemAvailable = RENDER_BUFFER_SIZE)
@@ -112,4 +113,11 @@ void render_buffer::Draw()
 	// glDeleteVertexArrays(VAO)
 	// glBindBuffer(0)
 	// glDeleteBuffer(VBO)
+}
+
+void render_buffer::ClearBuffer()
+{
+	BufferMemory.Content = BufferMemory.Head;
+	BufferMemory.MemUsed = 0;
+	BufferMemory.MemAvailable = RENDER_BUFFER_MEMORY_SIZE_MB;
 }

@@ -13,6 +13,7 @@ namespace renderer
 		{
 			GLfloat Vertex[6];
 			GLfloat UV[6];
+			GLbyte	Indices[6];
 		};
 	};
 	
