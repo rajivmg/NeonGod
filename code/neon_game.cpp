@@ -3,21 +3,6 @@
 #include "neon_texture_loader.h"
 #include <GL/glew.h>
 
-internal void
-DrawRectangle(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY)
-{
-	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	glBegin(GL_TRIANGLES);
-	   glVertex3f(TopLeftX, TopLeftY, 0.0f);
-	   glVertex3f(-BottomRightX, BottomRightY, 0.0f);
-	   glVertex3f(BottomRightX, -BottomRightY, 0.0f);
-
-	   glVertex3f(-BottomRightX, BottomRightY, 0.0f);
-	   glVertex3f(BottomRightX, BottomRightY, 0.0f);
-	   glVertex3f(BottomRightX, -BottomRightY, 0.0f);
-	glEnd();
-}
-
 internal void 
 GameUpdateAndRender(game_input *Input)
 {
@@ -41,19 +26,20 @@ GameUpdateAndRender(game_input *Input)
 	
 	/*=====  End of Game Update  ======*/
 	
-	renderer::ClearWindowBuffers();
+	renderer::ClearBackBuffer();
 	
 	/*===================================
 	=            Game Render            =
 	===================================*/
-	
 	local_persist shader_program Shader;
-	local_persist rect_renderer RectRenderer= {};
+	local_persist rectangle_renderer RectRenderer= {};
 	local_persist b32 IsShaderCreated = 0;
 	
 	if(!IsShaderCreated)
 	{
-		LoadBMP("sails.bmp");
+		texture SailsTexture = LoadBMP_32_RGBA("art.bmp");
+		RectRenderer.SetTextureMap(&SailsTexture);
+		FreeTextureMemory(&SailsTexture);
 
 		read_file_result VShaderSource = ReadFile("v.txt");
 		read_file_result FShaderSource = ReadFile("f.txt");
@@ -63,21 +49,27 @@ GameUpdateAndRender(game_input *Input)
 	}
 
 
-	rect TestRect = {};
+	rectangle TestRect = {};
 	
-	GLfloat Content1[36] = {-0.5f,  0.5f, 0.0f,
+	GLfloat Content1[48] = {-0.5f,  0.5f, 0.0f,
 							1.0f, 0.0f, 0.0f, // C
+							0.0f, 1.0f, // T
 					      -0.5f, -0.5f, 0.0f,
 					      1.0f, 0.0f, 0.0f, // C
+					      	0.0f, 0.0f, //T
 						   0.5f,  0.5f, 0.0f,
 						   1.0f, 0.0f, 0.0f, //C
+						   1.0f, 1.0f, //T
 
 						  -0.5f, -0.5f, 0.0f,
 						  1.0f, 0.0f, 0.0f, // C
+						  	0.0f, 0.0f, // T
 						   0.5f, -0.5f, 0.0f,
 						   1.0f, 0.0f, 0.0f, //C
+						   1.0f, 0.0f, // T
 						   0.5f,  0.5f, 0.0f, 
-							1.0f, 0.0f, 0.0f, //C 
+							1.0f, 0.0f, 0.0f, //C
+							1.0f, 1.0f
 							};
 
 	memcpy(TestRect.Content, Content1, sizeof(Content1));

@@ -30,7 +30,7 @@ internal read_file_result ReadFile(const char *Filename)
 		long Temp = ftell(Fp);
 		if(Temp != -1L && Temp >= 0)
 		{
-			Result.ContentSize = (uint32_t)Temp;
+			Result.ContentSize = (u32)Temp;
 		}
 		else { /*$Logging*/ }
 
@@ -64,13 +64,13 @@ internal void FreeFileMemory(void *FileMemory)
 	free(FileMemory);
 }
 
-internal void WriteFile(const char *Filename, uint32_t BytesToWrite, void *Content)
+internal void WriteFile(const char *Filename, u32 BytesToWrite, void *Content)
 {
 	FILE *Fp;
 	Fp = fopen(Filename, "wb");
 	if(Fp != 0)
 	{
-		size_t BytesWritten = fwrite(Content, sizeof(uint8_t), BytesToWrite, Fp);
+		size_t BytesWritten = fwrite(Content, sizeof(u8), BytesToWrite, Fp);
 		if(BytesWritten != (size_t)BytesToWrite)
 		{
 			/*$Logging*/
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 			if(MainApp.GLContext)
 			{
 				glewInit();
-				printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
+				printf("%s\nGL: %s", glGetString(GL_RENDERER), glGetString(GL_VERSION));
 				// debug_read_file_result Info = DEBUGReadFile("test.cpp");
 				// DEBUGWriteFile("test.copied", Info.ContentSize, Info.Content);
 				// DEBUGFreeFileMemory(Info.Content);

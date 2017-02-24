@@ -12,13 +12,13 @@
 
 struct read_file_result
 {
-	uint32_t ContentSize;
-	void *Content;
+	u32		ContentSize;
+	void 	*Content;
 };
 
 internal read_file_result ReadFile(const char *Filename);
 internal void FreeFileMemory(void *FileMemory);
-internal void WriteFile(const char *Filename, uint32_t BytesToWrite, void *FileContent);
+internal void WriteFile(const char *Filename, u32 BytesToWrite, void *FileContent);
 
 #endif
 
@@ -51,7 +51,7 @@ struct game_input
 };
 
 inline game_controller_input*
-GetController(game_input *Input, uint8_t Index)
+GetController(game_input *Input, u8 Index)
 {
 	Assert(Index < ArrayCount(Input->Controllers));
 	return (&Input->Controllers[Index]);

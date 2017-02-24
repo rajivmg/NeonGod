@@ -6,9 +6,9 @@ struct MainApp_t
 	SDL_Window *Window;
 	SDL_GLContext GLContext;
 	SDL_Event WindowEvent;
-	uint32_t WindowWidth;
-	uint32_t WindowHeight;
-	bool ShouldQuit;
+	u32 WindowWidth;
+	u32 WindowHeight;
+	b32 ShouldQuit;
 };
 
 #endif

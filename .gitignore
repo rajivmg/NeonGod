@@ -4,3 +4,6 @@
 *.zip
 .vs/
 Debug/
+*.trace
+*.cap
+*.opensdf

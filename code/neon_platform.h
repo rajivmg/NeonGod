@@ -14,4 +14,5 @@ typedef int16_t  s16;
 typedef int8_t   s8;
 typedef s32		 b32;
 
-#define RECT_BUFFER_SIZE_MB MEGABYTE(64)
+typedef float 	 r32;
+typedef double 	 r64;
