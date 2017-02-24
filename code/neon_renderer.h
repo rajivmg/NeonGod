@@ -6,15 +6,10 @@
 
 namespace renderer
 {
-	//GLfloat Content[90]; // 6x(XXXUUU) ... (X = xxx U= uu) = 15/vertex
 	union rect
 	{
-		GLfloat Content[18];
-		struct
-		{
-			GLfloat Vertex[18];
-			//GLfloat UV[12];
-		}; 
+// XCXCXC XCXCXC => xxx ccc xxx ccc xxx ccc xxx ccc xxx ccc xxx ccc
+		GLfloat Content[36];
 	};
 
 	struct rect_buffer
@@ -34,8 +29,8 @@ namespace renderer
 		GLuint Fs;
 		GLuint Program;
 
-		void Sources(debug_read_file_result *VsFile, debug_read_file_result *FsFile);
-		void Compile(debug_read_file_result *VsFile, debug_read_file_result *FsFile);
+		void Sources(read_file_result *VsFile, read_file_result *FsFile);
+		void Compile(read_file_result *VsFile, read_file_result *FsFile);
 		void MakeProgram();
 		GLuint AttribLoc(char const * Attrib);
 		GLuint UniformLoc(char const * Uniform);
@@ -60,6 +55,7 @@ namespace renderer
 	};
 
 	void ClearWindowBuffers();
+	void Start();
 }
 
 #endif

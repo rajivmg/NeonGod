@@ -10,15 +10,15 @@
 
 #if INTERNAL_BUILD
 
-struct debug_read_file_result
+struct read_file_result
 {
 	uint32_t ContentSize;
 	void *Content;
 };
 
-internal debug_read_file_result DEBUGReadFile(const char *Filename);
-internal void DEBUGFreeFileMemory(void *FileMemory);
-internal void DEBUGWriteFile(const char *Filename, uint32_t BytesToWrite, void *FileContent);
+internal read_file_result ReadFile(const char *Filename);
+internal void FreeFileMemory(void *FileMemory);
+internal void WriteFile(const char *Filename, uint32_t BytesToWrite, void *FileContent);
 
 #endif
 

@@ -2,7 +2,7 @@
 
 using namespace renderer;
 
-void shader_program::Sources(debug_read_file_result *VsFile, debug_read_file_result *FsFile)
+void shader_program::Sources(read_file_result *VsFile, read_file_result *FsFile)
 {
 	Vs = glCreateShader(GL_VERTEX_SHADER);
 	Fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -11,7 +11,7 @@ void shader_program::Sources(debug_read_file_result *VsFile, debug_read_file_res
 	MakeProgram();
 }
 
-void shader_program::Compile(debug_read_file_result *VsFile, debug_read_file_result *FsFile)
+void shader_program::Compile(read_file_result *VsFile, read_file_result *FsFile)
 {
 	glShaderSource(Vs, 1, (GLchar * const *)(&VsFile->Content), (const GLint *)(&VsFile->ContentSize));
 	glShaderSource(Fs, 1, (GLchar * const *)(&FsFile->Content), (const GLint *)(&FsFile->ContentSize));
@@ -93,8 +93,10 @@ void rect_renderer::CreateGPUBuffer()
 	glBufferData(GL_ARRAY_BUFFER, RectBuffer.MemUsed, RectBuffer.Head, GL_DYNAMIC_DRAW);
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
-	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vp"), 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vp"), 3, GL_FLOAT, GL_FALSE, 24, (GLvoid *)0);
 	glEnableVertexAttribArray(ShaderProgram.AttribLoc("in_vp"));
+	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vc"), 3, GL_FLOAT, GL_FALSE, 24, (GLvoid *)12);
+	glEnableVertexAttribArray(ShaderProgram.AttribLoc("in_vc"));
 	// ...
 }
 
@@ -139,6 +141,12 @@ void rect_renderer::ClearRectBuffer()
 	RectBuffer.Content = RectBuffer.Head;
 	RectBuffer.MemUsed = 0;
 	RectBuffer.MemAvailable = RECT_BUFFER_SIZE_MB;
+}
+
+void renderer::Start()
+{
+	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+	//glEnable(GL_DEPTH_TEST);
 }
 
 void renderer::ClearWindowBuffers()

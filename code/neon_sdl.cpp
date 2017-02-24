@@ -15,12 +15,13 @@
 #include "neon_sdl.h"
 #include "neon_renderer.cpp"
 #include "neon_game.cpp"
+#include "neon_texture_loader.cpp"
 
 // #include "neon_game.h"
 
-internal debug_read_file_result DEBUGReadFile(const char *Filename)
+internal read_file_result ReadFile(const char *Filename)
 {
-	debug_read_file_result Result = {};
+	read_file_result Result = {};
 	FILE *Fp;
 	Fp = fopen(Filename, "rb");
 	if(Fp != 0)
@@ -58,12 +59,12 @@ internal debug_read_file_result DEBUGReadFile(const char *Filename)
 	return Result;
 }
 
-internal void DEBUGFreeFileMemory(void *FileMemory)
+internal void FreeFileMemory(void *FileMemory)
 {
 	free(FileMemory);
 }
 
-internal void DEBUGWriteFile(const char *Filename, uint32_t BytesToWrite, void *Content)
+internal void WriteFile(const char *Filename, uint32_t BytesToWrite, void *Content)
 {
 	FILE *Fp;
 	Fp = fopen(Filename, "wb");
@@ -143,7 +144,7 @@ int main(int argc, char **argv)
 	{
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
@@ -155,15 +156,17 @@ int main(int argc, char **argv)
 
 		MainApp.Window = SDL_CreateWindow("Neon God",
 										SDL_WINDOWPOS_UNDEFINED,
-										SDL_WINDOWPOS_UNDEFINED, 1024, 720,
+										SDL_WINDOWPOS_UNDEFINED, 1280, 720,
 										SDL_WINDOW_OPENGL);
+		MainApp.WindowWidth = 1280;
+		MainApp.WindowHeight = 720;
 		if(MainApp.Window)
 		{
 			MainApp.GLContext = SDL_GL_CreateContext(MainApp.Window);
 			if(MainApp.GLContext)
 			{
 				glewInit();
-				printf("DEBUG: OpenGL Version: %s\n", glGetString(GL_VERSION));
+				printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
 				// debug_read_file_result Info = DEBUGReadFile("test.cpp");
 				// DEBUGWriteFile("test.copied", Info.ContentSize, Info.Content);
 				// DEBUGFreeFileMemory(Info.Content);
@@ -175,7 +178,9 @@ int main(int argc, char **argv)
 				game_input Input[2] = {};
 				game_input *NewInput = &Input[0];
 				game_input *OldInput = &Input[1];
-					
+				
+				renderer::Start();
+
 				SDL_Event *Event = &MainApp.WindowEvent; 
 				MainApp.ShouldQuit = false;
 				while(!MainApp.ShouldQuit)

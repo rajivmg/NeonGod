@@ -1,5 +1,6 @@
 #include "neon_game.h"
 #include "neon_renderer.h"
+#include "neon_texture_loader.h"
 #include <GL/glew.h>
 
 internal void
@@ -52,8 +53,10 @@ GameUpdateAndRender(game_input *Input)
 	
 	if(!IsShaderCreated)
 	{
-		debug_read_file_result VShaderSource = DEBUGReadFile("v.txt");
-		debug_read_file_result FShaderSource = DEBUGReadFile("f.txt");
+		LoadBMP("sails.bmp");
+
+		read_file_result VShaderSource = ReadFile("v.txt");
+		read_file_result FShaderSource = ReadFile("f.txt");
 
 		Shader.Sources(&VShaderSource, &FShaderSource);
 		IsShaderCreated = 1;
@@ -62,32 +65,45 @@ GameUpdateAndRender(game_input *Input)
 
 	rect TestRect = {};
 	
-	GLfloat Vertex[18] = {-0.5f, 0.5f, 0.0f,
-					   -0.5f, -0.5f, 0.0f,
-						0.5f, 0.5f, 0.0f,
+	GLfloat Content1[36] = {-0.5f,  0.5f, 0.0f,
+							1.0f, 0.0f, 0.0f, // C
+					      -0.5f, -0.5f, 0.0f,
+					      1.0f, 0.0f, 0.0f, // C
+						   0.5f,  0.5f, 0.0f,
+						   1.0f, 0.0f, 0.0f, //C
 
-						-0.5f, -0.5f, 0.0f,
-						0.5f, -0.5f, 0.0f,
-						0.5f, 0.5, 0.0f};
-	memcpy(TestRect.Vertex, Vertex, sizeof(Vertex));
+						  -0.5f, -0.5f, 0.0f,
+						  1.0f, 0.0f, 0.0f, // C
+						   0.5f, -0.5f, 0.0f,
+						   1.0f, 0.0f, 0.0f, //C
+						   0.5f,  0.5f, 0.0f, 
+							1.0f, 0.0f, 0.0f, //C 
+							};
 
-	// rect TestRect1 = {};
-	
-	// GLfloat Vertex1[18] = {-0.9f, 0.5f, 0.0f,
-	// 				   -0.5f, -0.5f, 0.0f,
-	// 					0.5f, 0.5f, 0.0f,
+	memcpy(TestRect.Content, Content1, sizeof(Content1));
 
-	// 					-0.5f, -0.5f, 0.0f,
-	// 					0.5f, -0.5f, 0.0f,
-	// 					0.5f, 0.5, 0.0f};
-	// memcpy(TestRect1.Vertex, Vertex1, sizeof(Vertex));
+	// rect TestRect2 = {};
 
+	// GLfloat Content2[36] = {-0.8f,  0.8f, 0.0f,
+	// 						0.0f, 1.0f, 0.0f, // C
+	// 				      -0.8f, -0.8f, 0.0f,
+	// 				      0.0f, 1.0f, 0.0f, // C
+	// 					   0.8f,  0.8f, 0.0f,
+	// 					   0.0f, 1.0f, 0.0f, //C
+
+	// 					  -0.8f, -0.8f, 0.0f,
+	// 					  0.0f, 1.0f, 0.0f, // C
+	// 					   0.8f, -0.8f, 0.0f,
+	// 					   0.0f, 1.0f, 0.0f, //C
+	// 					   0.8f,  0.8f, 0.0f, 
+	// 						0.0f, 1.0f, 0.0f, //C 
+	// 						};
+
+	// memcpy(TestRect2.Content, Content2, sizeof(Content2));
+	//RectRenderer.PushRect(&TestRect2);
 	RectRenderer.PushRect(&TestRect);
-	//RectRenderer.PushRect(&TestRect1);
 	RectRenderer.SetShaderProgram(Shader);
 	RectRenderer.Draw();
-
-	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 	
 	/*=====  End of Game Render  ======*/
 	
