@@ -1,2 +1,2 @@
 # NeonGod
-[Personal Project] OpenGL 2D Game Engine 
+3D OpenGL Game Engine
