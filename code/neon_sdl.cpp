@@ -13,6 +13,8 @@
 
 #include "neon_platform.h"
 #include "neon_sdl.h"
+
+#include "neon_math.cpp"
 #include "neon_renderer.cpp"
 #include "neon_game.cpp"
 #include "neon_texture_loader.cpp"

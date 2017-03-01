@@ -46,6 +46,10 @@ GameUpdateAndRender(game_input *Input)
 
 		Shader.Sources(&VShaderSource, &FShaderSource);
 		IsShaderCreated = 1;
+
+		Vector2 Top = Vector2(1.0f, 2.0f);
+		Vector2 Bottom = Vector2(2.0f, 3.0f);
+		Vector2 ResultS = Top + Bottom;
 	}
 
 
