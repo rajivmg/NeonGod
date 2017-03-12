@@ -1,6 +1,6 @@
 #version 330
 
-in	vec3 vc;
+in	vec4 vc;
 in  vec2 tc;
 
 out vec4 color;
@@ -9,6 +9,5 @@ uniform sampler2D tex;
 
 void main ()
 {
-	color = texture(tex, tc) + (vec4(vc, 1.0) * 0.0);
-	//color = vec4(vc, 1.0);
+	color = texture(tex, tc) + (vc * 0.0);
 }

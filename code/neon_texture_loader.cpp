@@ -39,7 +39,7 @@ texture LoadBMP_32_RGBA(char const * Filename)
 		// u32 A = (*Pixel & 0xFF000000) >> 24;
 		*Pixel = R | G | B | A;
 	}
-
+	
 	return Result;
 }
 

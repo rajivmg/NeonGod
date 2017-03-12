@@ -21,11 +21,37 @@
 
 // #include "neon_game.h"
 
+global_persist MainApp_t MainApp;
+
+inline 
+void GetWindowSize(s32 *Width, s32 *Height)
+{
+	SDL_GetWindowSize(MainApp.Window, &MainApp.WindowWidth, &MainApp.WindowHeight);
+	*Width = MainApp.WindowWidth;
+	*Height = MainApp.WindowHeight; 
+}	
+
+inline
+s32 GetWindowWidth()
+{
+	SDL_GetWindowSize(MainApp.Window, &MainApp.WindowWidth, &MainApp.WindowHeight);
+	return MainApp.WindowWidth;
+}
+
+inline
+s32 GetWindowHeight()
+{
+	SDL_GetWindowSize(MainApp.Window, &MainApp.WindowWidth, &MainApp.WindowHeight);
+	return MainApp.WindowHeight;
+}
+
+
 internal read_file_result ReadFile(const char *Filename)
 {
 	read_file_result Result = {};
 	FILE *Fp;
 	Fp = fopen(Filename, "rb");
+	Assert(Fp != 0);
 	if(Fp != 0)
 	{
 		fseek(Fp, 0, SEEK_END);
@@ -34,7 +60,10 @@ internal read_file_result ReadFile(const char *Filename)
 		{
 			Result.ContentSize = (u32)Temp;
 		}
-		else { /*$Logging*/ }
+		else
+		{
+			//@TODO: LOG 
+		}
 
 		// Set the position indicator to the start of the file
 		fseek(Fp, 0, SEEK_SET);
@@ -43,14 +72,14 @@ internal read_file_result ReadFile(const char *Filename)
 		Result.Content = (void *)malloc(sizeof(char) * Result.ContentSize);
 		if(Result.Content == 0)
 		{
-			/*$Logging*/
+			//@TODO: LOG
 		}
 
 		// Read the file contents
 		size_t ContentReadSize = fread(Result.Content, sizeof(char), Result.ContentSize, Fp);
 		if(ContentReadSize == 0 || ContentReadSize != Result.ContentSize)
 		{
-			/*$Logging*/
+			//@TODO: LOG
 		}
 		fclose(Fp);	
 	}
@@ -70,16 +99,20 @@ internal void WriteFile(const char *Filename, u32 BytesToWrite, void *Content)
 {
 	FILE *Fp;
 	Fp = fopen(Filename, "wb");
+	Assert(Fp != 0);
 	if(Fp != 0)
 	{
 		size_t BytesWritten = fwrite(Content, sizeof(u8), BytesToWrite, Fp);
 		if(BytesWritten != (size_t)BytesToWrite)
 		{
-			/*$Logging*/
+			//@TODO: LOG
 		}
 		fclose(Fp);
 	}
-	else { /*$Logging*/}	
+	else
+	{ 
+		//@TODO: LOG
+	}	
 }
 
 internal
@@ -140,7 +173,6 @@ void SDLProcessPendingEvents(SDL_Event *Event, game_controller_input *KeyboardCo
 
 int main(int argc, char **argv)
 {
-	MainApp_t MainApp;
 
 	if(SDL_Init(SDL_INIT_VIDEO) == 0)
 	{
@@ -168,7 +200,7 @@ int main(int argc, char **argv)
 			if(MainApp.GLContext)
 			{
 				glewInit();
-				printf("%s\nGL: %s", glGetString(GL_RENDERER), glGetString(GL_VERSION));
+				printf("OpenGL Ver:%s\n", glGetString(GL_VERSION));
 				// debug_read_file_result Info = DEBUGReadFile("test.cpp");
 				// DEBUGWriteFile("test.copied", Info.ContentSize, Info.Content);
 				// DEBUGFreeFileMemory(Info.Content);
@@ -181,7 +213,7 @@ int main(int argc, char **argv)
 				game_input *NewInput = &Input[0];
 				game_input *OldInput = &Input[1];
 				
-				renderer::Start();
+				renderer::Init();
 
 				SDL_Event *Event = &MainApp.WindowEvent; 
 				MainApp.ShouldQuit = false;

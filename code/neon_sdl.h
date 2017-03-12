@@ -6,9 +6,13 @@ struct MainApp_t
 	SDL_Window *Window;
 	SDL_GLContext GLContext;
 	SDL_Event WindowEvent;
-	u32 WindowWidth;
-	u32 WindowHeight;
+	s32 WindowWidth;
+	s32 WindowHeight;
 	b32 ShouldQuit;
 };
+
+inline void GetWindowSize(u32 *Width, u32 *Height);
+inline s32 GetWindowWidth();
+inline s32 GetWindowHeight();
 
 #endif
