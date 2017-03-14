@@ -1,6 +1,6 @@
 #ifndef NEON_TEXTURE_LOADER_H
 #define NEON_TEXTURE_LOADER_H
-#include "neon_game.h"
+#include "neon_platform.h"
 
 typedef struct texture
 {

@@ -213,7 +213,7 @@ int main(int argc, char **argv)
 				game_input *NewInput = &Input[0];
 				game_input *OldInput = &Input[1];
 				
-				renderer::Init();
+				InitRenderer();
 
 				SDL_Event *Event = &MainApp.WindowEvent; 
 				MainApp.ShouldQuit = false;

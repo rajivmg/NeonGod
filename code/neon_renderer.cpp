@@ -1,330 +1,79 @@
 #include "neon_renderer.h"
 
-using namespace renderer;
-
-/*u8 texture_units::GetFreeTextureUnit()
-{
-	// Value 0 : Free And Value 1: Used
-
-	for(u8 Index = 0; Index < MAX_TEXTURE_UNITS; ++Index)
-	{
-		if(Unit[Index] == 0)
-		{
-			Unit[Index] = 1;
-			return Index;
-		}
-	}
-
-	Assert(!"No free texture unit found.");
-	
-	// Invalid return
-	return MAX_TEXTURE_UNITS;
-}
-
-void texture_units::FreeTextureUnit(u8 Index)
-{
-	Assert(Index < MAX_TEXTURE_UNITS);
-	Unit[Index] = 0;
-}*/
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 ////
-////	shader_program functions
+////	Shader
 ////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-void shader_program::Sources(read_file_result *VsFile, read_file_result *FsFile)
+void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile)
 {
-	Vs = glCreateShader(GL_VERTEX_SHADER);
-	Fs = glCreateShader(GL_FRAGMENT_SHADER);
-	
-	Compile(VsFile, FsFile);
-	MakeProgram();
-}
+	Shader->Vs = glCreateShader(GL_VERTEX_SHADER);
+	Shader->Fs = glCreateShader(GL_FRAGMENT_SHADER);
 
-void shader_program::Compile(read_file_result *VsFile, read_file_result *FsFile)
-{
-	glShaderSource(Vs, 1, (GLchar * const *)(&VsFile->Content), (const GLint *)(&VsFile->ContentSize));
-	glShaderSource(Fs, 1, (GLchar * const *)(&FsFile->Content), (const GLint *)(&FsFile->ContentSize));
+	glShaderSource(Shader->Vs, 1, (GLchar * const *)(&VsFile->Content), (const GLint *)(&VsFile->ContentSize));
+	glShaderSource(Shader->Fs, 1, (GLchar * const *)(&FsFile->Content), (const GLint *)(&FsFile->ContentSize));
 
-	glCompileShader(Vs);
-	glCompileShader(Fs);
-}
+	glCompileShader(Shader->Vs);
+	glCompileShader(Shader->Fs);
 
-void shader_program::MakeProgram()
-{
-	Program = glCreateProgram();
-	glAttachShader(Program, Vs);
-	glAttachShader(Program, Fs);
+	Shader->Program = glCreateProgram();
+	glAttachShader(Shader->Program, Shader->Vs);
+	glAttachShader(Shader->Program, Shader->Fs);
 
-	glLinkProgram(Program);
+	glLinkProgram(Shader->Program);
 		
-	glValidateProgram(Program);
+	glValidateProgram(Shader->Program);
 	GLint Validated;
-	glGetProgramiv(Program, GL_VALIDATE_STATUS, &Validated);
+	glGetProgramiv(Shader->Program, GL_VALIDATE_STATUS, &Validated);
 	
 	if(!Validated)
 	{
 		char VsErrors[8192];
 		char FsErrors[8192];
 		char ProgramErrors[8192];
-		glGetShaderInfoLog(Vs, sizeof(VsErrors), 0, VsErrors);
-		glGetShaderInfoLog(Fs, sizeof(FsErrors), 0, FsErrors);
-		glGetProgramInfoLog(Program, sizeof(ProgramErrors), 0, ProgramErrors);
+		glGetShaderInfoLog(Shader->Vs, sizeof(VsErrors), 0, VsErrors);
+		glGetShaderInfoLog(Shader->Fs, sizeof(FsErrors), 0, FsErrors);
+		glGetProgramInfoLog(Shader->Program, sizeof(ProgramErrors), 0, ProgramErrors);
 
 		Assert(!"Shader compilation and/or linking failed");	
 	}	
 
-	glDetachShader(Program, Vs);
-	glDetachShader(Program, Fs);
+	glDetachShader(Shader->Program, Shader->Vs);
+	glDetachShader(Shader->Program, Shader->Fs);
 
-	glDeleteShader(Vs);
-	glDeleteShader(Fs);
+	glDeleteShader(Shader->Vs);
+	glDeleteShader(Shader->Fs);
 }
 
-GLuint shader_program::AttribLoc(char const * Attrib)
-{
-	//@TODO: Use glBindAttribLocation()
-	GLint Loc = glGetAttribLocation(Program, Attrib);
-	Assert(Loc!=-1);
-	return (GLuint)Loc;
-}
-
-GLuint shader_program::UniformLoc(char const * Uniform)
-{
-	GLint Loc = glGetUniformLocation(Program, Uniform);
-	Assert(Loc != -1);
-	return (GLuint)Loc;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
 ////
 ////	rect_buffer functions 
 ////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-void rect_buffer::Init()
+void InitRectBuffer(rect_buffer *Buffer)
 {
-	MemAvailable = RECT_BUFFER_SIZE; // In bytes
-	MemUsed 	 = 0;
-	Content 	 = malloc(RECT_BUFFER_SIZE);
-	Head 		 = Content;
-	if(Content == 0)
+	Buffer->MemAvailable = RECT_BUFFER_SIZE; // In bytes
+	Buffer->MemUsed 	 = 0;
+	Buffer->Content 	 = malloc(RECT_BUFFER_SIZE);
+	Buffer->Head 		 = Buffer->Content;
+	if(Buffer->Content == 0)
 	{
 		Assert(!"AllocError");
 		// @TODO: exit(0); and show message
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
 ////
-////	rect_batch functions 
+////	Rectangle related functions
 ////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//
-void rect_batch::Push(rectangle const * Rectangle)
-{
-	Assert(IsBound == 1);
-
-	if(RectBuffer.Content == 0)
-	{
-		RectBuffer.Init();
-	}
-	
-	if(RectBuffer.MemAvailable >= sizeof(rectangle))
-	{
-		if(RectangleCount == 0)
-		{
-			BufferDataHead = RectBuffer.Content;
-		}
-		
-		++RectangleCount;
-		BufferDataSize += sizeof(rectangle);
-
-		memcpy(RectBuffer.Content, Rectangle, sizeof(rectangle));
-		RectBuffer.Content = (rectangle *)RectBuffer.Content + 1; // Move the pointer forward to point to unused memory
-		RectBuffer.MemAvailable -= sizeof(rectangle);
-		RectBuffer.MemUsed += sizeof(rectangle);
-	}
-	else
-	{
-		Assert(!"NoMem");
-		// exit(0) and show message(Insufficient buffer memory size)
-	}
-}
-
-//
-void rect_batch::CreateGPUBuffer()
-{
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	
-	glBufferData(GL_ARRAY_BUFFER, BufferDataSize, BufferDataHead, GL_DYNAMIC_DRAW);
-	
-	glGenVertexArrays(1, &VAO);
-	
-	glBindVertexArray(VAO);
-	
-	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vp"), 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
-	glEnableVertexAttribArray(ShaderProgram.AttribLoc("in_vp"));
-	
-	glVertexAttribPointer(ShaderProgram.AttribLoc("in_vc"), 4, GL_FLOAT, GL_FALSE, 36, (GLvoid *)12);
-	glEnableVertexAttribArray(ShaderProgram.AttribLoc("in_vc"));
-	
-	glVertexAttribPointer(ShaderProgram.AttribLoc("in_tc"), 2, GL_FLOAT, GL_FALSE, 36, (GLvoid *)28);
-	glEnableVertexAttribArray(ShaderProgram.AttribLoc("in_tc"));
-}
-
-//
-void rect_batch::UpdateGPUBuffer()
-{
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, BufferDataSize, BufferDataHead, GL_DYNAMIC_DRAW);
-}
-
-//
-void rect_batch::SetShaderProgram(shader_program Program)
-{
-	ShaderProgram = Program;
-	IsShaderSet = 1;
-}
-
-//
-void rect_batch::SetTextureMap(texture *Texture)
-{
-	u8 FreeTextureSlot = 0;//texture_units::GetFreeTextureUnit();
-
-	glActiveTexture(GL_TEXTURE0 + FreeTextureSlot);
-
-	glGenTextures(1, &Tex);
-	glBindTexture(GL_TEXTURE_2D, Tex);
-
-	glTexImage2D(GL_TEXTURE_2D,
- 				 0,
-			 	 GL_RGBA,
-			 	 Texture->Width,
-			 	 Texture->Height,
-			 	 0,
-			 	 GL_RGBA,
-			 	 GL_UNSIGNED_BYTE,
-			 	 Texture->Content);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-}
-
-//
-void rect_batch::Bind()
-{
-	if(IsBound == 0)
-	{
-		IsBound = 1;
-	}
-	else if(IsBound == 2)
-	{
-		Assert(!"Rebinding same rectangle renderer multiple times not allowed.");
-	}
-}
-
-//
-void rect_batch::Unbind()
-{
-	if(IsBound == 1)
-	{
-		IsBound = 2;
-	}
-	else if(IsBound == 0)
-	{
-		Assert(!"Unbinding unbound rectangle renderer is not allowed.");
-	}
-}
-
-//
-void rect_batch::Draw()
-{	
-	Assert(IsBound != 0);
-
-	if(!GPUBufferCreated)
-	{
-		CreateGPUBuffer();
-		GPUBufferCreated = 1;
-	}
-	else
-	{
-		UpdateGPUBuffer();
-	}
-	
-	glBindVertexArray(VAO);
-
-	glUseProgram(ShaderProgram.Program);
-
-	r32 A = 2.0f/(r32)GetWindowWidth(), B = 2.0f/(r32)GetWindowHeight();
-	Proj._00 = A; Proj._01 = 0; Proj._02 = 0; Proj._03 = -1;
-	Proj._10 = 0; Proj._11 = B; Proj._12 = 0; Proj._13 = -1;
-	Proj._20 = 0; Proj._21 = 0; Proj._22 = 1; Proj._23 =  0;
-	Proj._30 = 0; Proj._31 = 0; Proj._32 = 0; Proj._33 =  1;
-
-	glUniformMatrix4fv(ShaderProgram.UniformLoc("proj"), 1, GL_TRUE, Proj.Elements);
-	
-	glDrawArrays(GL_TRIANGLES, 0, BufferDataSize / sizeof(rectangle) * 6);
-
-	Flush();
-}
-
-//
-void rect_batch::Flush()
-{
-	Status = NEVER_BOUND;
-	RectangleCount = 0;
-	BufferDataHead = 0;
-	BufferDataSize = 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-////
-////	renderer namespace
-////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-//
-void renderer::Init()
-{
-	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-
-	//glEnable(GL_DEPTH_TEST);
-	
-	glFrontFace(GL_CW);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK); //@TODO: Handle transparent triangles
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-}
-
-
-//
 rect* MakeRectangle(Vector2 Origin, Vector2 Size,
 					Vector4 Color, Vector4 UVCoords)
 {
-
-	//GLfloat *Elements = (GLfloat *)malloc(sizeof(GLfloat) * 48);
-
 	rect *RectVertex = (rect *)malloc(sizeof(rect)); 
+
 /*
-	Origin(5,  0,  0)
-	  Size(10, 10, 0)
-
-	----|||||||||||
-
 	D--------C
 	|  U 	/|
 	|      / |
@@ -441,15 +190,95 @@ rect* MakeRectangle(Vector2 Origin, Vector2 Size,
 	return RectVertex;
 }
 
+void InitBatch(rect_batch *RectBatch)
+{
+	RectBatch->Type = RECT;
+	RectBatch->Status = NEVER_BOUND;
+	RectBatch->IsBound = 0;
+	RectBatch->IsShaderSet = 0;
+	RectBatch->RectangleCount = 0;
+	RectBatch->BufferDataHead = 0;
+	RectBatch->BufferDataSize = 0;
+}
 
-//
-void renderer::BatchBind(rect_batch *RectangleBatch)
+void SetShader(rect_batch *RectBatch, shader *_Shader)
+{
+	RectBatch->Shader = *_Shader;
+	RectBatch->IsShaderSet = 1;
+}
+
+void SetTextureMap(rect_batch *RectBatch, texture *Texture)
+{
+	u8 FreeTextureSlot = 0;
+
+	glActiveTexture(GL_TEXTURE0 + FreeTextureSlot);
+
+	glGenTextures(1, &RectBatch->Tex);
+	glBindTexture(GL_TEXTURE_2D, RectBatch->Tex);
+
+	glTexImage2D(GL_TEXTURE_2D,
+ 				 0,
+			 	 GL_RGBA,
+			 	 Texture->Width,
+			 	 Texture->Height,
+			 	 0,
+			 	 GL_RGBA,
+			 	 GL_UNSIGNED_BYTE,
+			 	 Texture->Content);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
+
+void CreateGPUBuffer(rect_batch *RectBatch)
+{
+	glGenBuffers(1, &RectBatch->VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, RectBatch->VBO);
+	
+	glBufferData(GL_ARRAY_BUFFER, RectBatch->BufferDataSize, RectBatch->BufferDataHead, GL_DYNAMIC_DRAW);
+	
+	glGenVertexArrays(1, &RectBatch->VAO);
+	
+	glBindVertexArray(RectBatch->VAO);
+	
+	GLint posLoc = glGetAttribLocation(RectBatch->Shader.Program, "in_position");
+	Assert(posLoc != -1);
+	GLint colorLoc = glGetAttribLocation(RectBatch->Shader.Program, "in_color");
+	Assert(colorLoc != -1);
+	GLint texcoordLoc = glGetAttribLocation(RectBatch->Shader.Program, "in_texcoord");
+	Assert(texcoordLoc != -1);
+
+	glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
+	glEnableVertexAttribArray((GLuint)posLoc);
+	
+	glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 36, (GLvoid *)12);
+	glEnableVertexAttribArray((GLuint)colorLoc);
+	
+	glVertexAttribPointer((GLuint)texcoordLoc, 2, GL_FLOAT, GL_FALSE, 36, (GLvoid *)28);
+	glEnableVertexAttribArray((GLuint)texcoordLoc);
+}
+
+void UpdateGPUBuffer(rect_batch *RectBatch)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, RectBatch->VBO);
+	glBufferData(GL_ARRAY_BUFFER, RectBatch->BufferDataSize, RectBatch->BufferDataHead, GL_DYNAMIC_DRAW);
+}
+
+void FlushForUpdate(rect_batch *RectBatch)
+{
+	RectBatch->Status = NEVER_BOUND;
+	RectBatch->RectangleCount = 0;
+	RectBatch->BufferDataHead = 0;
+	RectBatch->BufferDataSize = 0;
+}
+
+void BindBatch(rect_batch *RectangleBatch)
 {
 	if(RectangleBatch->Status == UNBOUND)
 	{
-		CurrentBatch = RectangleBatch;
-		// xxx
-		// Assert(!"Once batch is unbound it can be only binded after Flush()");		
+		CurrentBatch = RectangleBatch;	
 	}
 	else if(RectangleBatch->Status == NEVER_BOUND)
 	{
@@ -462,7 +291,7 @@ void renderer::BatchBind(rect_batch *RectangleBatch)
 	}
 }
 
-void renderer::BatchUnbind(rect_batch *RectangleBatch)
+void UnbindBatch(rect_batch *RectangleBatch)
 {
 	Assert(CurrentBatch == RectangleBatch);
 	if(CurrentBatch->Status != NEVER_BOUND)
@@ -472,14 +301,14 @@ void renderer::BatchUnbind(rect_batch *RectangleBatch)
 	}
 }
 
-void renderer::BatchPushContent(rect *Rect)
+void PushIntoBatch(rect *Rect)
 {
 	Assert(CurrentBatch != 0); // Check if a batch is bound 
 	Assert(CurrentBatch->Type == RECT) // Check the type of batch
 	Assert(CurrentBatch->Status != UNBOUND); // Unbound batch can only be drawn
 	if(RectBuffer.Content == 0)
 	{
-		RectBuffer.Init();
+		InitRectBuffer(&RectBuffer);
 	}
 	
 	if(RectBuffer.MemAvailable >= sizeof(rect))
@@ -490,7 +319,7 @@ void renderer::BatchPushContent(rect *Rect)
 		}
 		
 		++(CurrentBatch->RectangleCount);
-		CurrentBatch->BufferDataSize += sizeof(rect); // 54: Size of one rect
+		CurrentBatch->BufferDataSize += sizeof(rect);
 
 		memcpy(RectBuffer.Content, Rect->Content, sizeof(rect));
 		RectBuffer.Content = (rect *)RectBuffer.Content + 1; // Move the pointer forward to point to unused memory
@@ -504,7 +333,7 @@ void renderer::BatchPushContent(rect *Rect)
 	}
 }
 
-void renderer::BatchDraw(rect_batch *RectangleBatch)
+void DrawBatch(rect_batch *RectangleBatch)
 {
 	Assert(CurrentBatch->IsShaderSet);
 	Assert(CurrentBatch == RectangleBatch);
@@ -512,17 +341,17 @@ void renderer::BatchDraw(rect_batch *RectangleBatch)
 
 	if(!CurrentBatch->GPUBufferCreated)
 	{
-		CurrentBatch->CreateGPUBuffer();
+		CreateGPUBuffer(CurrentBatch);
 		CurrentBatch->GPUBufferCreated = 1;
 	}
 	else
 	{
-		CurrentBatch->UpdateGPUBuffer();
+		UpdateGPUBuffer(CurrentBatch);
 	}
 	
 	glBindVertexArray(CurrentBatch->VAO);
 
-	glUseProgram(CurrentBatch->ShaderProgram.Program);
+	glUseProgram(CurrentBatch->Shader.Program);
 
 	r32 A = 2.0f/(r32)GetWindowWidth(), B = 2.0f/(r32)GetWindowHeight();
 	Matrix4 *Proj = &CurrentBatch->Proj;
@@ -531,23 +360,42 @@ void renderer::BatchDraw(rect_batch *RectangleBatch)
 	Proj->_20 = 0; Proj->_21 = 0; Proj->_22 = 1; Proj->_23 =  0;
 	Proj->_30 = 0; Proj->_31 = 0; Proj->_32 = 0; Proj->_33 =  1;
 
-	glUniformMatrix4fv(CurrentBatch->ShaderProgram.UniformLoc("proj"), 1, GL_TRUE, Proj->Elements);
+	GLint projLoc = glGetUniformLocation(CurrentBatch->Shader.Program, "proj");
+	Assert(projLoc != -1);
+	glUniformMatrix4fv((GLuint)projLoc, 1, GL_TRUE, Proj->Elements);
 	
 	glDrawArrays(GL_TRIANGLES, 0, CurrentBatch->BufferDataSize / sizeof(rect) * 6);
 
-	CurrentBatch->Flush();
+	FlushForUpdate(CurrentBatch);
 }
 
-//
-void renderer::BackBufferFlush()
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+////
+////	Renderer functions
+////
+void InitRenderer()
+{
+	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+
+	//glEnable(GL_DEPTH_TEST);
+	
+	glFrontFace(GL_CW);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK); //@TODO: Handle transparent triangles
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void BackBufferFlush()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void renderer::RectBufferFlush()
+void RectBufferFlush()
 {
 	RectBuffer.Content = RectBuffer.Head;
 	RectBuffer.MemUsed = 0;
 	RectBuffer.MemAvailable = RECT_BUFFER_SIZE;
 }
-

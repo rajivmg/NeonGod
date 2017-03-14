@@ -1,27 +1,6 @@
 #ifndef NEON_GAME_H
 #define NEON_GAME_H
 
-#define Assert(Exp) if(!(Exp)) {*(volatile int *)0 = 0;}
-#define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
-
-#define KILOBYTE(X) 1024LL * (X)
-#define MEGABYTE(X) 1024LL * KILOBYTE(X)
-#define GIGABYTE(X) 1024LL * MEGABYTE(X) // @CHECK: is LL required
-
-#if INTERNAL_BUILD
-
-struct read_file_result
-{
-	u32		ContentSize;
-	void 	*Content;
-};
-
-internal read_file_result ReadFile(const char *Filename);
-internal void FreeFileMemory(void *FileMemory);
-internal void WriteFile(const char *Filename, u32 BytesToWrite, void *FileContent);
-
-#endif
-
 struct game_button_state
 {
 	int HalfTransitionCount;

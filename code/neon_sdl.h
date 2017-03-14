@@ -11,8 +11,4 @@ struct MainApp_t
 	b32 ShouldQuit;
 };
 
-inline void GetWindowSize(u32 *Width, u32 *Height);
-inline s32 GetWindowWidth();
-inline s32 GetWindowHeight();
-
 #endif

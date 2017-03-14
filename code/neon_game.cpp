@@ -26,14 +26,14 @@ GameUpdateAndRender(game_input *Input)
 	
 	/*=====  End of Game Update  ======*/
 	
-	renderer::BackBufferFlush();
+	BackBufferFlush();
 	
 	/*===================================
 	=            Game Render            =
 	===================================*/
-	local_persist shader_program Shader;
+	local_persist shader Shader;
 
-	local_persist rect_batch RectBatch= {};
+	local_persist rect_batch RectBatch = {};
 
 	local_persist b32 IsShaderCreated = 0;
 
@@ -44,14 +44,16 @@ GameUpdateAndRender(game_input *Input)
 	
 	if(!IsShaderCreated)
 	{
+		InitBatch(&RectBatch);
 
 		texture Art = LoadBMP_32_RGBA("NyanFaceA.bmp");
-		RectBatch.SetTextureMap(&Art);
+		SetTextureMap(&RectBatch, &Art);
 		FreeTextureMemory(&Art);
 
-		read_file_result VShaderSource = ReadFile("v.txt");
-		read_file_result FShaderSource = ReadFile("f.txt");
-		Shader.Sources(&VShaderSource, &FShaderSource);
+		read_file_result VShaderSrc = ReadFile("gen_vert.glsl");
+		read_file_result FShaderSrc = ReadFile("gen_frag.glsl");
+		//Shader.Sources(&VShaderSource, &FShaderSource);
+		CreateShader(&Shader, &VShaderSrc, &FShaderSrc);
 		IsShaderCreated = 1;
 
 		Vector2 Top = Vector2(1.0f, 2.0f);
@@ -60,23 +62,17 @@ GameUpdateAndRender(game_input *Input)
 		Vector4 P = Vector4(-Top, -Bottom);
 	}
 
-	RectBatch.SetShaderProgram(Shader);
+	SetShader(&RectBatch, &Shader);
 
-	BatchBind(&RectBatch);
+	BindBatch(&RectBatch);
 	
-	BatchPushContent(Shape);
+	PushIntoBatch(Shape);
 	
-	BatchDraw(&RectBatch);
+	DrawBatch(&RectBatch);
 	
-	BatchUnbind(&RectBatch);
-
-	// renderer::BindBatch()
-
-	// renderer::PushIntoBatch()
-
-	// renderer::DrawBatch()
+	UnbindBatch(&RectBatch);
 
 
-	renderer::RectBufferFlush();
+	RectBufferFlush();
 	/*=====  End of Game Render  ======*/
 }
