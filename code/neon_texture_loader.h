@@ -31,7 +31,7 @@ typedef struct bmp_format
     u32   	ClrImportant;   /* Number of important colors */
 } bmp_format;
 
-texture 	LoadBMP_32_RGBA(char const * Filename);
+texture 	LoadBMP_RGBA(char const * Filename);
 void 		FreeTextureMemory(texture *Texture);
 
 #endif

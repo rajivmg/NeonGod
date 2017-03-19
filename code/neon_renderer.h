@@ -44,30 +44,27 @@
 //
 
 // Rectangle vertex data
-struct rect
+struct quad
 {
 	GLfloat Content[54];
 };
 
+internal quad* MakeQuad(Vector2 Origin, Vector2 Size,
+						Vector4 Color, Vector4 UVCoords);
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 ////
 ////	Rectangle buffer
 ////	Store vertex data of all the rectangle to be drawn
-#define RECT_BUFFER_SIZE MEGABYTE(64)
-
-struct rect_buffer
+struct mem_buffer
 {
 	u32 MemAvailable;
 	u32	MemUsed;
+	u32 MemSize;
 
 	void* Head;
 	void* Content;
 };
-
-void InitRectBuffer(rect_buffer *RectBuffer);
-
-local_persist rect_buffer RectBuffer = {};
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
@@ -81,7 +78,7 @@ struct shader
 	GLuint Program;
 };
 
-void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile);
+internal void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
@@ -90,54 +87,37 @@ void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *Fs
 ////
 enum batch_type
 {
-	RECT,
+	QUAD,
 	MESH
 };
 
-enum batch_status
-{
-	NEVER_BOUND,
-	BOUND,
-	UNBOUND
-};
-
-struct rect_batch
+struct quad_batch
 {
 	GLuint VBO;
 	GLuint VAO;
 	GLuint Tex;
-	shader Shader;
-
+	shader Shader;	
+	
+	mem_buffer Buffer;
+	
 	batch_type Type;
+	
+	b32 GPUBufferAvailable;
+	b32 ShaderAvailable;
+	b32 TextureAvailable;
+	u32 QuadCount;
 
-	void* BufferDataHead; // Pointer to the data in RectBuffer
-	u32	BufferDataSize;
-
-	u32 RectangleCount;
-
-	b32	IsBound;
-	b32 IsShaderSet;
-	b32 GPUBufferCreated;
-	batch_status Status;
 	Matrix4 Proj;
 };
 
-local_persist rect_batch *CurrentBatch;
-
-internal void InitBatch(rect_batch *RectBatch);
-internal void SetShader(rect_batch *RectBatch);
-internal void SetTexureMap(rect_batch *RectBatch, texture *Texture);
-internal void CreateGPUBuffer(rect_batch *RectBatch);
-internal void UpdateGPUBuffer(rect_batch *RectBatch);
-internal void FlushForUpdate(rect_batch *RectBatch);
-
-internal rect* MakeRectangle(Vector2 Origin, Vector2 Size,
-						Vector3 Color, Vector4 UVCoords);
-//@TODO: Replace with macros
-internal void BindBatch(rect_batch *RectangleBatch);
-internal void UnbindBatch(rect_batch *RectangleBatch);
-internal void PushIntoBatch(rect *Rect);
-internal void DrawBatch(rect_batch *RectangleBatch);
+internal void InitQuadBatch(quad_batch *QuadBatch, u32 BufferSize);
+internal void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture);
+internal void SetShader(quad_batch *QuadBatch, shader *_Shader);
+internal void CreateGPUBuffer(quad_batch *QuadBatch);
+internal void UpdateGPUBuffer(quad_batch *QuadBatch);
+internal void PushQuad(quad_batch *QuadBatch, quad *Quad);
+internal void DrawQuadBatch(quad_batch *QuadBatch);
+internal void FlushBatch(quad_batch *QuadBatch);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
@@ -145,10 +125,6 @@ internal void DrawBatch(rect_batch *RectangleBatch);
 ////	Renderer functions
 //// 
 void InitRenderer();
-
-void UseShader();
-
 void BackBufferFlush();
-void RectBufferFlush();
 
 #endif

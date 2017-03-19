@@ -31,30 +31,31 @@ GameUpdateAndRender(game_input *Input)
 	/*===================================
 	=            Game Render            =
 	===================================*/
-	local_persist shader Shader;
+	local_persist shader Lvl1Shader;
+	local_persist texture Lvl1Ground;
+	local_persist b32 ShaderAndTextureSet = false;
+	local_persist quad_batch Level1 = {};
+	local_persist quad *GroundQuad = {}; 
 
-	local_persist rect_batch RectBatch = {};
-
-	local_persist b32 IsShaderCreated = 0;
-
-	local_persist rect *Shape = MakeRectangle(Vector2(590, 310),
-						  Vector2(100, 100),
-						  Vector4(0.2f, 0.2f, 0.2f, 1.0f),
-						  Vector4(0, 0, 1, 1));
-	
-	if(!IsShaderCreated)
+	if(!ShaderAndTextureSet)
 	{
-		InitBatch(&RectBatch);
-
-		texture Art = LoadBMP_32_RGBA("NyanFaceA.bmp");
-		SetTextureMap(&RectBatch, &Art);
-		FreeTextureMemory(&Art);
+		InitQuadBatch(&Level1, MEGABYTE(8));
 
 		read_file_result VShaderSrc = ReadFile("gen_vert.glsl");
 		read_file_result FShaderSrc = ReadFile("gen_frag.glsl");
-		//Shader.Sources(&VShaderSource, &FShaderSource);
-		CreateShader(&Shader, &VShaderSrc, &FShaderSrc);
-		IsShaderCreated = 1;
+		CreateShader(&Lvl1Shader, &VShaderSrc, &FShaderSrc);
+		FreeFileMemory(&VShaderSrc);
+		FreeFileMemory(&FShaderSrc);
+		SetShader(&Level1, &Lvl1Shader);
+
+		Lvl1Ground = LoadBMP_RGBA("level1_ground.bmp");
+		SetTextureRGBA(&Level1, &Lvl1Ground);
+
+		ShaderAndTextureSet = true;
+
+ 		GroundQuad = MakeQuad(Vector2(0, 0), Vector2((r32)GetWindowWidth(), (r32)GetWindowHeight()),
+								Vector4(1.0f, 1.0f, 0.0f, 1.0f),
+								Vector4(0.0f, 0.0f, 1.0f, 1.0f));
 
 		Vector2 Top = Vector2(1.0f, 2.0f);
 		Vector2 Bottom = Vector2(2.0f, 3.0f);
@@ -62,17 +63,9 @@ GameUpdateAndRender(game_input *Input)
 		Vector4 P = Vector4(-Top, -Bottom);
 	}
 
-	SetShader(&RectBatch, &Shader);
-
-	BindBatch(&RectBatch);
+	PushQuad(&Level1, GroundQuad);
 	
-	PushIntoBatch(Shape);
-	
-	DrawBatch(&RectBatch);
-	
-	UnbindBatch(&RectBatch);
+	DrawQuadBatch(&Level1);
 
-
-	RectBufferFlush();
 	/*=====  End of Game Render  ======*/
 }

@@ -90,9 +90,9 @@ internal read_file_result ReadFile(const char *Filename)
 	return Result;
 }
 
-internal void FreeFileMemory(void *FileMemory)
+internal void FreeFileMemory(read_file_result *ReadFileResult)
 {
-	free(FileMemory);
+	free(ReadFileResult->Content);
 }
 
 internal void WriteFile(const char *Filename, u32 BytesToWrite, void *Content)

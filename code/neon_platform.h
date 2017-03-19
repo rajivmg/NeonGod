@@ -34,7 +34,7 @@ struct read_file_result
 };
 
 internal read_file_result ReadFile(const char *Filename);
-internal void FreeFileMemory(void *FileMemory);
+internal void FreeFileMemory(read_file_result *ReadFileResult);
 internal void WriteFile(const char *Filename, u32 BytesToWrite, void *FileContent);
 
 inline void GetWindowSize(u32 *Width, u32 *Height);

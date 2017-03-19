@@ -1,6 +1,6 @@
 #include "neon_texture_loader.h"
 
-texture LoadBMP_32_RGBA(char const * Filename)
+texture LoadBMP_RGBA(char const * Filename)
 {
 	texture Result = {};
 

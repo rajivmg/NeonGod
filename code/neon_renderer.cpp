@@ -45,33 +45,14 @@ void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *Fs
 	glDeleteShader(Shader->Fs);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////
-////
-////	rect_buffer functions 
-////
-void InitRectBuffer(rect_buffer *Buffer)
-{
-	Buffer->MemAvailable = RECT_BUFFER_SIZE; // In bytes
-	Buffer->MemUsed 	 = 0;
-	Buffer->Content 	 = malloc(RECT_BUFFER_SIZE);
-	Buffer->Head 		 = Buffer->Content;
-	if(Buffer->Content == 0)
-	{
-		Assert(!"AllocError");
-		// @TODO: exit(0); and show message
-	}
-}
-
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 ////
-////	Rectangle related functions
+////	Quad related functions
 ////
-rect* MakeRectangle(Vector2 Origin, Vector2 Size,
-					Vector4 Color, Vector4 UVCoords)
+quad* MakeQuad(Vector2 Origin, Vector2 Size, Vector4 Color, Vector4 UVCoords)
 {
-	rect *RectVertex = (rect *)malloc(sizeof(rect)); 
+	quad *QuadVertex = (quad *)malloc(sizeof(quad)); 
 
 /*
 	D--------C
@@ -108,113 +89,116 @@ rect* MakeRectangle(Vector2 Origin, Vector2 Size,
 
 	// Upper triangle
 	// D
-	RectVertex->Content[0] = Origin.X;
-	RectVertex->Content[1] = Origin.Y + Size.Y;
-	RectVertex->Content[2] = 0;
+	QuadVertex->Content[0] = Origin.X;
+	QuadVertex->Content[1] = Origin.Y + Size.Y;
+	QuadVertex->Content[2] = 0;
 
-	RectVertex->Content[3]  = Color.R;
-	RectVertex->Content[4]  = Color.G;
-	RectVertex->Content[5]  = Color.B;
-	RectVertex->Content[6]  = Color.A;
+	QuadVertex->Content[3]  = Color.R;
+	QuadVertex->Content[4]  = Color.G;
+	QuadVertex->Content[5]  = Color.B;
+	QuadVertex->Content[6]  = Color.A;
 
-	RectVertex->Content[7]  = UVCoords.X;
-	RectVertex->Content[8]  = UVCoords.W;
+	QuadVertex->Content[7]  = UVCoords.X;
+	QuadVertex->Content[8]  = UVCoords.W;
 
 	// C
-	RectVertex->Content[9]  = Origin.X + Size.X;
-	RectVertex->Content[10] = Origin.Y + Size.Y;
-	RectVertex->Content[11] = 0;
+	QuadVertex->Content[9]  = Origin.X + Size.X;
+	QuadVertex->Content[10] = Origin.Y + Size.Y;
+	QuadVertex->Content[11] = 0;
 
-	RectVertex->Content[12] = Color.R;
-	RectVertex->Content[13] = Color.G;
-	RectVertex->Content[14] = Color.B;
-	RectVertex->Content[15] = Color.A;
+	QuadVertex->Content[12] = Color.R;
+	QuadVertex->Content[13] = Color.G;
+	QuadVertex->Content[14] = Color.B;
+	QuadVertex->Content[15] = Color.A;
 
-	RectVertex->Content[16] = UVCoords.Z;
-	RectVertex->Content[17] = UVCoords.W;
+	QuadVertex->Content[16] = UVCoords.Z;
+	QuadVertex->Content[17] = UVCoords.W;
 
 	// A
-	RectVertex->Content[18] = Origin.X;
-	RectVertex->Content[19] = Origin.Y;
-	RectVertex->Content[20] = 0;
+	QuadVertex->Content[18] = Origin.X;
+	QuadVertex->Content[19] = Origin.Y;
+	QuadVertex->Content[20] = 0;
 
-	RectVertex->Content[21] = Color.R;
-	RectVertex->Content[22] = Color.G;
-	RectVertex->Content[23] = Color.B;
-	RectVertex->Content[24] = Color.A;
+	QuadVertex->Content[21] = Color.R;
+	QuadVertex->Content[22] = Color.G;
+	QuadVertex->Content[23] = Color.B;
+	QuadVertex->Content[24] = Color.A;
   
-	RectVertex->Content[25] = UVCoords.X;
-	RectVertex->Content[26] = UVCoords.Y;
+	QuadVertex->Content[25] = UVCoords.X;
+	QuadVertex->Content[26] = UVCoords.Y;
 
 
 	// Lower triangle
 	// A
-	RectVertex->Content[27] = Origin.X;
-	RectVertex->Content[28] = Origin.Y;
-	RectVertex->Content[29] = 0;
+	QuadVertex->Content[27] = Origin.X;
+	QuadVertex->Content[28] = Origin.Y;
+	QuadVertex->Content[29] = 0;
 
-	RectVertex->Content[30] = Color.R;
-	RectVertex->Content[31] = Color.G;
-	RectVertex->Content[32] = Color.B;
-	RectVertex->Content[33] = Color.A;
+	QuadVertex->Content[30] = Color.R;
+	QuadVertex->Content[31] = Color.G;
+	QuadVertex->Content[32] = Color.B;
+	QuadVertex->Content[33] = Color.A;
   
-	RectVertex->Content[34] = UVCoords.X;
-	RectVertex->Content[35] = UVCoords.Y;
+	QuadVertex->Content[34] = UVCoords.X;
+	QuadVertex->Content[35] = UVCoords.Y;
 
 	// C
-	RectVertex->Content[36] = Origin.X + Size.X;
-	RectVertex->Content[37] = Origin.Y + Size.Y;
-	RectVertex->Content[38] = 0;
+	QuadVertex->Content[36] = Origin.X + Size.X;
+	QuadVertex->Content[37] = Origin.Y + Size.Y;
+	QuadVertex->Content[38] = 0;
 
-	RectVertex->Content[39] = Color.R;
-	RectVertex->Content[40] = Color.G;
-	RectVertex->Content[41] = Color.B;
-	RectVertex->Content[42] = Color.A;
+	QuadVertex->Content[39] = Color.R;
+	QuadVertex->Content[40] = Color.G;
+	QuadVertex->Content[41] = Color.B;
+	QuadVertex->Content[42] = Color.A;
 
-	RectVertex->Content[43] = UVCoords.Z;
-	RectVertex->Content[44] = UVCoords.W;
+	QuadVertex->Content[43] = UVCoords.Z;
+	QuadVertex->Content[44] = UVCoords.W;
 
 	// B
-	RectVertex->Content[45] = Origin.X + Size.X;
-	RectVertex->Content[46] = Origin.Y;
-	RectVertex->Content[47] = 0;
+	QuadVertex->Content[45] = Origin.X + Size.X;
+	QuadVertex->Content[46] = Origin.Y;
+	QuadVertex->Content[47] = 0;
 
-	RectVertex->Content[48] = Color.R;
-	RectVertex->Content[49] = Color.G;
-	RectVertex->Content[50] = Color.B;
-	RectVertex->Content[51] = Color.A;
+	QuadVertex->Content[48] = Color.R;
+	QuadVertex->Content[49] = Color.G;
+	QuadVertex->Content[50] = Color.B;
+	QuadVertex->Content[51] = Color.A;
 
-	RectVertex->Content[52] = UVCoords.Z;
-	RectVertex->Content[53] = UVCoords.Y;
+	QuadVertex->Content[52] = UVCoords.Z;
+	QuadVertex->Content[53] = UVCoords.Y;
 
-	return RectVertex;
+	return QuadVertex;
 }
 
-void InitBatch(rect_batch *RectBatch)
+void InitQuadBatch(quad_batch *QuadBatch, u32 BufferSize)
 {
-	RectBatch->Type = RECT;
-	RectBatch->Status = NEVER_BOUND;
-	RectBatch->IsBound = 0;
-	RectBatch->IsShaderSet = 0;
-	RectBatch->RectangleCount = 0;
-	RectBatch->BufferDataHead = 0;
-	RectBatch->BufferDataSize = 0;
+	QuadBatch->Type = QUAD;
+	QuadBatch->QuadCount = 0;
+	QuadBatch->GPUBufferAvailable = false;
+	QuadBatch->ShaderAvailable = false;
+	QuadBatch->TextureAvailable = false;
+
+	QuadBatch->Buffer.MemSize 	   = BufferSize;
+	QuadBatch->Buffer.MemAvailable = BufferSize; // In bytes
+	QuadBatch->Buffer.MemUsed 	   = 0;
+	QuadBatch->Buffer.Content 	   = malloc(BufferSize);
+	QuadBatch->Buffer.Head 		   = QuadBatch->Buffer.Content;
+	if(QuadBatch->Buffer.Content == 0)
+	{
+		Assert(!"AllocError");
+		// @TODO: exit(0); and show message
+	}
 }
 
-void SetShader(rect_batch *RectBatch, shader *_Shader)
-{
-	RectBatch->Shader = *_Shader;
-	RectBatch->IsShaderSet = 1;
-}
-
-void SetTextureMap(rect_batch *RectBatch, texture *Texture)
+void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture)
 {
 	u8 FreeTextureSlot = 0;
 
 	glActiveTexture(GL_TEXTURE0 + FreeTextureSlot);
 
-	glGenTextures(1, &RectBatch->Tex);
-	glBindTexture(GL_TEXTURE_2D, RectBatch->Tex);
+	glGenTextures(1, &QuadBatch->Tex);
+	glBindTexture(GL_TEXTURE_2D, QuadBatch->Tex);
 
 	glTexImage2D(GL_TEXTURE_2D,
  				 0,
@@ -232,22 +216,30 @@ void SetTextureMap(rect_batch *RectBatch, texture *Texture)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-void CreateGPUBuffer(rect_batch *RectBatch)
+void SetShader(quad_batch *QuadBatch, shader *_Shader)
 {
-	glGenBuffers(1, &RectBatch->VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, RectBatch->VBO);
+	QuadBatch->Shader = *_Shader;
+	QuadBatch->ShaderAvailable = true;
+}
+
+void CreateGPUBuffer(quad_batch *QuadBatch)
+{
+	glGenBuffers(1, &QuadBatch->VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, QuadBatch->VBO);
 	
-	glBufferData(GL_ARRAY_BUFFER, RectBatch->BufferDataSize, RectBatch->BufferDataHead, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, QuadBatch->Buffer.MemUsed, QuadBatch->Buffer.Head, GL_DYNAMIC_DRAW);
 	
-	glGenVertexArrays(1, &RectBatch->VAO);
+	glGenVertexArrays(1, &QuadBatch->VAO);
 	
-	glBindVertexArray(RectBatch->VAO);
+	glBindVertexArray(QuadBatch->VAO);
 	
-	GLint posLoc = glGetAttribLocation(RectBatch->Shader.Program, "in_position");
+	Assert(QuadBatch->ShaderAvailable);
+	
+	GLint posLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_position");
 	Assert(posLoc != -1);
-	GLint colorLoc = glGetAttribLocation(RectBatch->Shader.Program, "in_color");
+	GLint colorLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_color");
 	Assert(colorLoc != -1);
-	GLint texcoordLoc = glGetAttribLocation(RectBatch->Shader.Program, "in_texcoord");
+	GLint texcoordLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_texcoord");
 	Assert(texcoordLoc != -1);
 
 	glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
@@ -260,113 +252,75 @@ void CreateGPUBuffer(rect_batch *RectBatch)
 	glEnableVertexAttribArray((GLuint)texcoordLoc);
 }
 
-void UpdateGPUBuffer(rect_batch *RectBatch)
+void UpdateGPUBuffer(quad_batch *QuadBatch)
 {
-	glBindBuffer(GL_ARRAY_BUFFER, RectBatch->VBO);
-	glBufferData(GL_ARRAY_BUFFER, RectBatch->BufferDataSize, RectBatch->BufferDataHead, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, QuadBatch->VBO);
+	glBufferData(GL_ARRAY_BUFFER, QuadBatch->Buffer.MemUsed, QuadBatch->Buffer.Head, GL_DYNAMIC_DRAW);
 }
 
-void FlushForUpdate(rect_batch *RectBatch)
+void FlushBatch(quad_batch *QuadBatch)
 {
-	RectBatch->Status = NEVER_BOUND;
-	RectBatch->RectangleCount = 0;
-	RectBatch->BufferDataHead = 0;
-	RectBatch->BufferDataSize = 0;
+	QuadBatch->QuadCount = 0;
+	QuadBatch->Buffer.Content = QuadBatch->Buffer.Head;
+	QuadBatch->Buffer.MemUsed = 0;
+	QuadBatch->Buffer.MemAvailable = QuadBatch->Buffer.MemSize;
 }
 
-void BindBatch(rect_batch *RectangleBatch)
+void PushQuad(quad_batch *QuadBatch, quad *Quad)
 {
-	if(RectangleBatch->Status == UNBOUND)
-	{
-		CurrentBatch = RectangleBatch;	
-	}
-	else if(RectangleBatch->Status == NEVER_BOUND)
-	{
-		RectangleBatch->Status = BOUND;
-		CurrentBatch = RectangleBatch;
-	}
-	else
-	{
-		// Do nothing because it's already bound :)
-	}
-}
+	Assert(QuadBatch->Type == QUAD) // Check the type of batch
 
-void UnbindBatch(rect_batch *RectangleBatch)
-{
-	Assert(CurrentBatch == RectangleBatch);
-	if(CurrentBatch->Status != NEVER_BOUND)
+	if(QuadBatch->Buffer.Content == 0)
 	{
-		CurrentBatch->Status = UNBOUND;
-		CurrentBatch = 0;
-	}
-}
-
-void PushIntoBatch(rect *Rect)
-{
-	Assert(CurrentBatch != 0); // Check if a batch is bound 
-	Assert(CurrentBatch->Type == RECT) // Check the type of batch
-	Assert(CurrentBatch->Status != UNBOUND); // Unbound batch can only be drawn
-	if(RectBuffer.Content == 0)
-	{
-		InitRectBuffer(&RectBuffer);
+		InitQuadBatch(QuadBatch, MEGABYTE(4));
 	}
 	
-	if(RectBuffer.MemAvailable >= sizeof(rect))
+	if(QuadBatch->Buffer.MemAvailable >= sizeof(quad))
 	{
-		if(CurrentBatch->RectangleCount == 0)
-		{
-			CurrentBatch->BufferDataHead = RectBuffer.Content;
-		}
-		
-		++(CurrentBatch->RectangleCount);
-		CurrentBatch->BufferDataSize += sizeof(rect);
+		memcpy(QuadBatch->Buffer.Content, Quad->Content, sizeof(quad));
+		QuadBatch->Buffer.Content = (quad *)QuadBatch->Buffer.Content + 1; // Move the pointer forward to point to unused memory
+		QuadBatch->Buffer.MemAvailable -= sizeof(quad);
+		QuadBatch->Buffer.MemUsed += sizeof(quad);
 
-		memcpy(RectBuffer.Content, Rect->Content, sizeof(rect));
-		RectBuffer.Content = (rect *)RectBuffer.Content + 1; // Move the pointer forward to point to unused memory
-		RectBuffer.MemAvailable -= sizeof(rect);
-		RectBuffer.MemUsed += sizeof(rect);
+		++(QuadBatch->QuadCount);
 	}
 	else
 	{
-		Assert(!"NoMem");
+		Assert(!"No memory available");
 		// exit(0) and show message(Insufficient buffer memory size)
 	}
 }
 
-void DrawBatch(rect_batch *RectangleBatch)
+void DrawQuadBatch(quad_batch *QuadBatch)
 {
-	Assert(CurrentBatch->IsShaderSet);
-	Assert(CurrentBatch == RectangleBatch);
-	Assert(CurrentBatch->Status != NEVER_BOUND);
-
-	if(!CurrentBatch->GPUBufferCreated)
+	if(!QuadBatch->GPUBufferAvailable)
 	{
-		CreateGPUBuffer(CurrentBatch);
-		CurrentBatch->GPUBufferCreated = 1;
+		CreateGPUBuffer(QuadBatch);
+		QuadBatch->GPUBufferAvailable = true;
 	}
 	else
 	{
-		UpdateGPUBuffer(CurrentBatch);
+		UpdateGPUBuffer(QuadBatch);
 	}
 	
-	glBindVertexArray(CurrentBatch->VAO);
+	glBindVertexArray(QuadBatch->VAO);
 
-	glUseProgram(CurrentBatch->Shader.Program);
+	glUseProgram(QuadBatch->Shader.Program);
 
 	r32 A = 2.0f/(r32)GetWindowWidth(), B = 2.0f/(r32)GetWindowHeight();
-	Matrix4 *Proj = &CurrentBatch->Proj;
+	Matrix4 *Proj = &QuadBatch->Proj;
 	Proj->_00 = A; Proj->_01 = 0; Proj->_02 = 0; Proj->_03 = -1;
 	Proj->_10 = 0; Proj->_11 = B; Proj->_12 = 0; Proj->_13 = -1;
 	Proj->_20 = 0; Proj->_21 = 0; Proj->_22 = 1; Proj->_23 =  0;
 	Proj->_30 = 0; Proj->_31 = 0; Proj->_32 = 0; Proj->_33 =  1;
 
-	GLint projLoc = glGetUniformLocation(CurrentBatch->Shader.Program, "proj");
+	GLint projLoc = glGetUniformLocation(QuadBatch->Shader.Program, "proj");
 	Assert(projLoc != -1);
 	glUniformMatrix4fv((GLuint)projLoc, 1, GL_TRUE, Proj->Elements);
 	
-	glDrawArrays(GL_TRIANGLES, 0, CurrentBatch->BufferDataSize / sizeof(rect) * 6);
+	glDrawArrays(GL_TRIANGLES, 0, QuadBatch->Buffer.MemUsed / sizeof(quad) * 6);
 
-	FlushForUpdate(CurrentBatch);
+	FlushBatch(QuadBatch);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -391,11 +345,4 @@ void InitRenderer()
 void BackBufferFlush()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
-
-void RectBufferFlush()
-{
-	RectBuffer.Content = RectBuffer.Head;
-	RectBuffer.MemUsed = 0;
-	RectBuffer.MemAvailable = RECT_BUFFER_SIZE;
 }
