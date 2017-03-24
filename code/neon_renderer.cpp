@@ -171,13 +171,84 @@ quad* MakeQuad(Vector2 Origin, Vector2 Size, Vector4 Color, Vector4 UVCoords)
 	return QuadVertex;
 }
 
-void InitQuadBatch(quad_batch *QuadBatch, u32 BufferSize)
+quad_colored MakeColoredQuad(Vector2 Origin, Vector2 Size,
+						Vector4 Color)
 {
-	QuadBatch->Type = QUAD;
+	// quad_colored *QuadVertex = (quad_colored *)malloc(sizeof(quad_colored)); 
+	quad_colored QuadVertex;
+	// Upper triangle
+	// D
+	QuadVertex.Content[0] = Origin.X;
+	QuadVertex.Content[1] = Origin.Y + Size.Y;
+	QuadVertex.Content[2] = 0;
+
+	QuadVertex.Content[3]  = Color.R;
+	QuadVertex.Content[4]  = Color.G;
+	QuadVertex.Content[5]  = Color.B;
+	QuadVertex.Content[6]  = Color.A;
+
+	// C
+	QuadVertex.Content[7]  = Origin.X + Size.X;
+	QuadVertex.Content[8] = Origin.Y + Size.Y;
+	QuadVertex.Content[9] = 0;
+
+	QuadVertex.Content[10] = Color.R;
+	QuadVertex.Content[11] = Color.G;
+	QuadVertex.Content[12] = Color.B;
+	QuadVertex.Content[13] = Color.A;
+
+	// A
+	QuadVertex.Content[14] = Origin.X;
+	QuadVertex.Content[15] = Origin.Y;
+	QuadVertex.Content[16] = 0;
+
+	QuadVertex.Content[17] = Color.R;
+	QuadVertex.Content[18] = Color.G;
+	QuadVertex.Content[19] = Color.B;
+	QuadVertex.Content[20] = Color.A;
+
+	// Lower t.angle
+	// A
+	QuadVertex.Content[21] = Origin.X;
+	QuadVertex.Content[22] = Origin.Y;
+	QuadVertex.Content[23] = 0;
+
+	QuadVertex.Content[24] = Color.R;
+	QuadVertex.Content[25] = Color.G;
+	QuadVertex.Content[26] = Color.B;
+	QuadVertex.Content[27] = Color.A;
+
+	// C
+	QuadVertex.Content[28] = Origin.X + Size.X;
+	QuadVertex.Content[29] = Origin.Y + Size.Y;
+	QuadVertex.Content[30] = 0;
+
+	QuadVertex.Content[31] = Color.R;
+	QuadVertex.Content[32] = Color.G;
+	QuadVertex.Content[33] = Color.B;
+	QuadVertex.Content[34] = Color.A;
+
+	// B
+	QuadVertex.Content[35] = Origin.X + Size.X;
+	QuadVertex.Content[36] = Origin.Y;
+	QuadVertex.Content[37] = 0;
+
+	QuadVertex.Content[38] = Color.R;
+	QuadVertex.Content[39] = Color.G;
+	QuadVertex.Content[40] = Color.B;
+	QuadVertex.Content[41] = Color.A;
+
+	return QuadVertex;
+}
+
+void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize)
+{
+	QuadBatch->Type = Type;
 	QuadBatch->QuadCount = 0;
 	QuadBatch->GPUBufferAvailable = false;
 	QuadBatch->ShaderAvailable = false;
 	QuadBatch->TextureAvailable = false;
+	QuadBatch->TexUnit = 0;
 
 	QuadBatch->Buffer.MemSize 	   = BufferSize;
 	QuadBatch->Buffer.MemAvailable = BufferSize; // In bytes
@@ -193,9 +264,9 @@ void InitQuadBatch(quad_batch *QuadBatch, u32 BufferSize)
 
 void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture)
 {
-	u8 FreeTextureSlot = 0;
-
-	glActiveTexture(GL_TEXTURE0 + FreeTextureSlot);
+	Assert(QuadBatch->Type == QUAD);
+	QuadBatch->Tex = TextureManager(GET_TEXTURE_UNIT);
+	glActiveTexture(GL_TEXTURE0 + QuadBatch->TexUnit);
 
 	glGenTextures(1, &QuadBatch->Tex);
 	glBindTexture(GL_TEXTURE_2D, QuadBatch->Tex);
@@ -239,18 +310,34 @@ void CreateGPUBuffer(quad_batch *QuadBatch)
 	Assert(posLoc != -1);
 	GLint colorLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_color");
 	Assert(colorLoc != -1);
-	GLint texcoordLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_texcoord");
-	Assert(texcoordLoc != -1);
+	if(QuadBatch->Type == QUAD)
+	{
+		GLint texcoordLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_texcoord");
+		Assert(texcoordLoc != -1);
 
-	glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
-	glEnableVertexAttribArray((GLuint)posLoc);
+		glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
+		glEnableVertexAttribArray((GLuint)posLoc);
+		
+		glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 36, (GLvoid *)12);
+		glEnableVertexAttribArray((GLuint)colorLoc);
+		
+		glVertexAttribPointer((GLuint)texcoordLoc, 2, GL_FLOAT, GL_FALSE, 36, (GLvoid *)28);
+		glEnableVertexAttribArray((GLuint)texcoordLoc);
 	
-	glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 36, (GLvoid *)12);
-	glEnableVertexAttribArray((GLuint)colorLoc);
-	
-	glVertexAttribPointer((GLuint)texcoordLoc, 2, GL_FLOAT, GL_FALSE, 36, (GLvoid *)28);
-	glEnableVertexAttribArray((GLuint)texcoordLoc);
+		GLint posSampler = glGetUniformLocation(QuadBatch->Shader.Program, "diffuse_sampler");
+		Assert(posSampler != -1);
+		glUniform1i(posSampler, QuadBatch->TexUnit);
+	}
+	else if(QuadBatch->Type == QUAD_COLORED)
+	{
+		glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 28, (GLvoid *)0);
+		glEnableVertexAttribArray((GLuint)posLoc);
+		
+		glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 28, (GLvoid *)12);
+		glEnableVertexAttribArray((GLuint)colorLoc);
+	}
 }
+
 
 void UpdateGPUBuffer(quad_batch *QuadBatch)
 {
@@ -268,20 +355,41 @@ void FlushBatch(quad_batch *QuadBatch)
 
 void PushQuad(quad_batch *QuadBatch, quad *Quad)
 {
-	Assert(QuadBatch->Type == QUAD) // Check the type of batch
-
+	Assert(QuadBatch->Type == QUAD);
 	if(QuadBatch->Buffer.Content == 0)
 	{
-		InitQuadBatch(QuadBatch, MEGABYTE(4));
+		InitQuadBatch(QuadBatch, QUAD, MEGABYTE(4));
 	}
-	
+
 	if(QuadBatch->Buffer.MemAvailable >= sizeof(quad))
 	{
 		memcpy(QuadBatch->Buffer.Content, Quad->Content, sizeof(quad));
 		QuadBatch->Buffer.Content = (quad *)QuadBatch->Buffer.Content + 1; // Move the pointer forward to point to unused memory
 		QuadBatch->Buffer.MemAvailable -= sizeof(quad);
 		QuadBatch->Buffer.MemUsed += sizeof(quad);
+		++(QuadBatch->QuadCount);
+	}
+	else
+	{
+		Assert(!"No memory available");
+		// exit(0) and show message(Insufficient buffer memory size)
+	}
+}
 
+void PushQuad(quad_batch *QuadBatch, quad_colored *Quad)
+{
+	Assert(QuadBatch->Type == QUAD_COLORED);
+	if(QuadBatch->Buffer.Content == 0)
+	{
+		InitQuadBatch(QuadBatch, QUAD_COLORED, MEGABYTE(4));
+	}
+
+	if(QuadBatch->Buffer.MemAvailable >= sizeof(quad_colored))
+	{
+		memcpy(QuadBatch->Buffer.Content, Quad->Content, sizeof(quad_colored));
+		QuadBatch->Buffer.Content = (quad_colored *)QuadBatch->Buffer.Content + 1; // Move the pointer forward to point to unused memory
+		QuadBatch->Buffer.MemAvailable -= sizeof(quad_colored);
+		QuadBatch->Buffer.MemUsed += sizeof(quad_colored);
 		++(QuadBatch->QuadCount);
 	}
 	else
@@ -318,9 +426,39 @@ void DrawQuadBatch(quad_batch *QuadBatch)
 	Assert(projLoc != -1);
 	glUniformMatrix4fv((GLuint)projLoc, 1, GL_TRUE, Proj->Elements);
 	
-	glDrawArrays(GL_TRIANGLES, 0, QuadBatch->Buffer.MemUsed / sizeof(quad) * 6);
+	GLsizei ContentSize = QuadBatch->Type == QUAD ? sizeof(quad) : sizeof(quad_colored);
+	glDrawArrays(GL_TRIANGLES, 0, QuadBatch->Buffer.MemUsed / ContentSize * 6);
 
 	FlushBatch(QuadBatch);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+////
+////	Texture manager functions
+////
+u16 TextureManager(tex_command Command, u16 TexUnit)
+{
+#define MAX_TEX_UNITS 12
+	local_persist b32 Unit[12];
+	//@NOTE: Currently max texture count is 12.
+	// Unit[] is initialised to 0. 0 means free and 1 means in use.
+	if(Command == GET_TEXTURE_UNIT)
+	{
+		for(u16 i = 0; i < MAX_TEX_UNITS; ++i)
+		{
+			if(Unit[i] == 0)
+				return i;
+		}
+		Assert(!"No free texture unit")
+	}
+	else if(Command == RELEASE_TEXTURE_UNIT)
+	{
+		Assert(TexUnit != -1);
+		Assert(Unit[TexUnit] != 0); // Assert is the TexUnit is already free.
+		Unit[TexUnit] = 0;
+	}
+	return (u16)-1;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////

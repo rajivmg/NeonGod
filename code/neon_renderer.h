@@ -48,14 +48,20 @@ struct quad
 {
 	GLfloat Content[54];
 };
+struct quad_colored
+{
+	GLfloat Content[42];
+};
 
 internal quad* MakeQuad(Vector2 Origin, Vector2 Size,
 						Vector4 Color, Vector4 UVCoords);
+internal quad_colored MakeColoredQuad(Vector2 Origin, Vector2 Size,
+						Vector4 Color);
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 ////
-////	Rectangle buffer
-////	Store vertex data of all the rectangle to be drawn
+////	memory buffer
+////	General purpose memory buffer
 struct mem_buffer
 {
 	u32 MemAvailable;
@@ -83,11 +89,25 @@ internal void CreateShader(shader *Shader, read_file_result *VsFile, read_file_r
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
 ////
+////	Texture manager
+////
+enum tex_command // Texture manager commands
+{
+	GET_TEXTURE_UNIT,
+	RELEASE_TEXTURE_UNIT
+};
+
+internal u16 TextureManager(tex_command Command, u16 TexUnit = -1);
+
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+////
 ////	Rectangle Batch
 ////
 enum batch_type
 {
 	QUAD,
+	QUAD_COLORED,
 	MESH
 };
 
@@ -97,6 +117,7 @@ struct quad_batch
 	GLuint VAO;
 	GLuint Tex;
 	shader Shader;	
+	u16	TexUnit;
 	
 	mem_buffer Buffer;
 	
@@ -110,12 +131,13 @@ struct quad_batch
 	Matrix4 Proj;
 };
 
-internal void InitQuadBatch(quad_batch *QuadBatch, u32 BufferSize);
+internal void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize);
 internal void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture);
 internal void SetShader(quad_batch *QuadBatch, shader *_Shader);
 internal void CreateGPUBuffer(quad_batch *QuadBatch);
 internal void UpdateGPUBuffer(quad_batch *QuadBatch);
 internal void PushQuad(quad_batch *QuadBatch, quad *Quad);
+internal void PushQuad(quad_batch *QuadBatch, quad_colored *Quad);
 internal void DrawQuadBatch(quad_batch *QuadBatch);
 internal void FlushBatch(quad_batch *QuadBatch);
 
