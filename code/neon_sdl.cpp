@@ -6,22 +6,25 @@
 #define SDL_MAIN_HANDLED 1
 #endif
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #include <stdio.h>
 #include <SDL2/SDL.h>
-
 #include <GL/glew.h>
 
 #include "neon_platform.h"
+
 #include "neon_sdl.h"
 
+////
 #include "neon_math.cpp"
 #include "neon_renderer.cpp"
 #include "neon_game.cpp"
 #include "neon_texture_loader.cpp"
+////
 
-// #include "neon_game.h"
-
-global_persist MainApp_t MainApp;
+global_variable MainApp_t MainApp;
 
 inline 
 void GetWindowSize(s32 *Width, s32 *Height)
@@ -45,8 +48,7 @@ s32 GetWindowHeight()
 	return MainApp.WindowHeight;
 }
 
-
-internal read_file_result ReadFile(const char *Filename)
+read_file_result ReadFile(const char *Filename)
 {
 	read_file_result Result = {};
 	FILE *Fp;
@@ -90,12 +92,12 @@ internal read_file_result ReadFile(const char *Filename)
 	return Result;
 }
 
-internal void FreeFileMemory(read_file_result *ReadFileResult)
+void FreeFileMemory(read_file_result *ReadFileResult)
 {
 	free(ReadFileResult->Content);
 }
 
-internal void WriteFile(const char *Filename, u32 BytesToWrite, void *Content)
+void WriteFile(const char *Filename, u32 BytesToWrite, void *Content)
 {
 	FILE *Fp;
 	Fp = fopen(Filename, "wb");
@@ -115,7 +117,6 @@ internal void WriteFile(const char *Filename, u32 BytesToWrite, void *Content)
 	}	
 }
 
-internal
 void SDLProcessKeyboardMessage(game_button_state *NewButtonState, bool IsDown)
 {
 	if(NewButtonState->EndedDown != IsDown)
@@ -125,7 +126,6 @@ void SDLProcessKeyboardMessage(game_button_state *NewButtonState, bool IsDown)
 	}
 }
 
-internal
 void SDLProcessPendingEvents(SDL_Event *Event, game_controller_input *KeyboardController)
 {
 	switch(Event->type)

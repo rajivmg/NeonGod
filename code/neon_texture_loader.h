@@ -2,12 +2,14 @@
 #define NEON_TEXTURE_LOADER_H
 #include "neon_platform.h"
 
+// 4-channel texture
 typedef struct texture
 {
 	s32 	Width;
 	s32 	Height;
 	void*	Content;
 	u32  	ContentSize;
+	b32		VFliped;
 } texture;
 
 typedef struct bmp_format
@@ -31,7 +33,26 @@ typedef struct bmp_format
     u32   	ClrImportant;   /* Number of important colors */
 } bmp_format;
 
-texture 	LoadBMP_RGBA(char const * Filename);
-void 		FreeTextureMemory(texture *Texture);
+#pragma pack(push, 1)
+typedef struct tga_header{
+  u8  IDLength;        /* 00h  Size of Image ID field */
+  u8  ColorMapType;    /* 01h  Color map type */
+  u8  ImageType;       /* 02h  Image type code */
+  u16 CMapStart;       /* 03h  Color map origin */
+  u16 CMapLength;      /* 05h  Color map length */
+  u8  CMapDepth;       /* 07h  Depth of color map entries */
+  u16 XOffset;         /* 08h  X origin of image */
+  u16 YOffset;         /* 0Ah  Y origin of image */
+  u16 Width;           /* 0Ch  Width of image */
+  u16 Height;          /* 0Eh  Height of image */
+  u8  PixelDepth;      /* 10h  Image pixel size */
+  u8  ImageDescriptor; /* 11h  Image descriptor byte */
+} tga_header;
+#pragma pack(pop)
 
+texture* LoadTextureRGBA(char const * Filename);
+void TextureFlipV(texture *Texture);
+void FreeTextureMemory(texture *Texture);
+void DebugSaveAsTGA(char const * Filename, texture *Texture);
+void SaveAsTGA(char const * Filename, texture *Texture);
 #endif

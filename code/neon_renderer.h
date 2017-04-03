@@ -53,9 +53,9 @@ struct quad_colored
 	GLfloat Content[42];
 };
 
-internal quad* MakeQuad(Vector2 Origin, Vector2 Size,
-						Vector4 Color, Vector4 UVCoords);
-internal quad_colored MakeColoredQuad(Vector2 Origin, Vector2 Size,
+quad* MakeQuad(Vector2 Origin, Vector2 Size,
+				Vector4 Color, Vector4 UVCoords);
+quad_colored MakeColoredQuad(Vector2 Origin, Vector2 Size,
 						Vector4 Color);
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +84,7 @@ struct shader
 	GLuint Program;
 };
 
-internal void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile);
+void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +97,7 @@ enum tex_command // Texture manager commands
 	RELEASE_TEXTURE_UNIT
 };
 
-internal u16 TextureManager(tex_command Command, u16 TexUnit = -1);
+u16 TextureManager(tex_command Command, u16 TexUnit = -1);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
@@ -131,15 +131,38 @@ struct quad_batch
 	Matrix4 Proj;
 };
 
-internal void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize);
-internal void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture);
-internal void SetShader(quad_batch *QuadBatch, shader *_Shader);
-internal void CreateGPUBuffer(quad_batch *QuadBatch);
-internal void UpdateGPUBuffer(quad_batch *QuadBatch);
-internal void PushQuad(quad_batch *QuadBatch, quad *Quad);
-internal void PushQuad(quad_batch *QuadBatch, quad_colored *Quad);
-internal void DrawQuadBatch(quad_batch *QuadBatch);
-internal void FlushBatch(quad_batch *QuadBatch);
+void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize);
+void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture);
+void SetShader(quad_batch *QuadBatch, shader *_Shader);
+void CreateGPUBuffer(quad_batch *QuadBatch);
+void UpdateGPUBuffer(quad_batch *QuadBatch);
+void PushQuad(quad_batch *QuadBatch, quad *Quad);
+void PushQuad(quad_batch *QuadBatch, quad_colored *Quad);
+void DrawQuadBatch(quad_batch *QuadBatch);
+void FlushBatch(quad_batch *QuadBatch);
+
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+////
+////	Text rendering functions
+////
+struct glyph
+{
+	Vector2 UV;
+	r32 Left;
+	r32 Top;
+	r32	AdvanceX;
+};
+
+struct text_batch
+{
+	quad_batch Batch;
+	glyph *Glyph;
+
+};
+
+void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeigth);
+void DrawText(text_batch *TextBatch, char const * Text, int X, int Y);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////

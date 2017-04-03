@@ -265,6 +265,12 @@ void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize)
 void SetTextureRGBA(quad_batch *QuadBatch, texture *Texture)
 {
 	Assert(QuadBatch->Type == QUAD);
+	if(!Texture->VFliped)
+	{
+		TextureFlipV(Texture);
+		Texture->VFliped = true;
+	}
+
 	QuadBatch->Tex = TextureManager(GET_TEXTURE_UNIT);
 	glActiveTexture(GL_TEXTURE0 + QuadBatch->TexUnit);
 
@@ -412,7 +418,12 @@ void DrawQuadBatch(quad_batch *QuadBatch)
 	}
 	
 	glBindVertexArray(QuadBatch->VAO);
-
+	
+	// if(QuadBatch->Type == QUAD)
+	// {
+	// 	glActiveTexture(GL_TEXTURE0 + QuadBatch->TexUnit);
+	// }
+	
 	glUseProgram(QuadBatch->Shader.Program);
 
 	r32 A = 2.0f/(r32)GetWindowWidth(), B = 2.0f/(r32)GetWindowHeight();
@@ -448,7 +459,10 @@ u16 TextureManager(tex_command Command, u16 TexUnit)
 		for(u16 i = 0; i < MAX_TEX_UNITS; ++i)
 		{
 			if(Unit[i] == 0)
+			{
+				Unit[i] = 1;
 				return i;
+			}
 		}
 		Assert(!"No free texture unit")
 	}
@@ -459,6 +473,82 @@ u16 TextureManager(tex_command Command, u16 TexUnit)
 		Unit[TexUnit] = 0;
 	}
 	return (u16)-1;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+////
+////	Text rendering functions
+////
+void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight)
+{
+	FT_Library FTLib;
+	FT_Face Face;
+
+	int Error = FT_Init_FreeType(&FTLib);
+	if(Error)
+	{
+		Assert(!"Error initialising the FreeType library.");
+	}
+
+	read_file_result FontData = ReadFile(FontSrc);
+
+	Error = FT_New_Memory_Face(FTLib, (const FT_Byte *)FontData.Content, FontData.ContentSize, 0, &Face);
+	if(Error == FT_Err_Unknown_File_Format)
+	{
+		Assert(!"File format is not supported.");
+	}
+	else if(Error)
+	{
+		Assert(!"File could not be opened or read.");
+	}
+
+	Error = FT_Set_Pixel_Sizes(Face, 0, FontHeight);
+	Assert(Error == 0);
+
+//
+
+	int GlyphIndex = FT_Get_Char_Index(Face, 65);
+
+	Error = FT_Load_Glyph(Face, GlyphIndex, FT_LOAD_DEFAULT);
+	Assert(Error == 0);
+	
+	if(Face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+	{
+		FT_Render_Glyph(Face->glyph, FT_RENDER_MODE_NORMAL);
+	}
+//
+}
+
+void DrawText(text_batch *TextBatch, char const * Text, int X, int Y)
+{
+	static b32 FontBaked = false;
+	
+	static GLuint FontTex;
+	static u16 TexUnit;
+	// static stbtt_bakedchar CData[96];
+
+	if(!FontBaked)
+	{
+		unsigned char FontBitmap[512*512]; 
+		// read_file_result FontData = ReadFile("c:/windows/fonts/times.ttf");
+		// stbtt_BakeFontBitmap((unsigned char *)FontData.Content, 0, 32.0, FontBitmap, 512, 512, 32, 96, CData);
+		// FreeFileMemory(&FontData);
+
+		glGenTextures(1, &FontTex);
+		TexUnit = TextureManager(GET_TEXTURE_UNIT);
+		glActiveTexture(GL_TEXTURE0 + TexUnit);
+		glBindTexture(GL_TEXTURE_2D, FontTex);
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512, 512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, FontBitmap);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    	FontBaked = true;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////

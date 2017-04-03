@@ -3,7 +3,7 @@
 #include "neon_texture_loader.h"
 #include <GL/glew.h>
 
-internal void 
+void 
 GameUpdateAndRender(game_input *Input)
 {
 	/*===================================
@@ -33,7 +33,7 @@ GameUpdateAndRender(game_input *Input)
 	===================================*/
 	local_persist shader QuadShader;
 	local_persist shader ColoredQuadShader;
-	local_persist texture GuiTexture;
+	local_persist texture *GuiTexture;
 	local_persist b32 ShaderAndTextureSet = false;
 	local_persist quad_batch GuiBatch = {};
 	local_persist quad_batch ColoredQuadBatch = {};
@@ -53,9 +53,11 @@ GameUpdateAndRender(game_input *Input)
 		FreeFileMemory(&F1Src);
 		SetShader(&GuiBatch, &QuadShader);
 
-	 	GuiTexture = LoadBMP_RGBA("nyan_face.bmp");
-		SetTextureRGBA(&GuiBatch, &GuiTexture);
-
+	 	GuiTexture = LoadTextureRGBA("debug_art.bmp");
+		SetTextureRGBA(&GuiBatch, GuiTexture);
+		// DebugSaveAsTGA("save_test.tga",GuiTexture);
+		SaveAsTGA("test_tga.tga", GuiTexture);
+		FreeTextureMemory(GuiTexture);
 		ShaderAndTextureSet = true;
 
 		InitQuadBatch(&ColoredQuadBatch, QUAD_COLORED, MEGABYTE(1));
@@ -74,7 +76,10 @@ GameUpdateAndRender(game_input *Input)
  		CQuad1 = MakeColoredQuad(Vector2(50, 50), Vector2(200, 200), Vector4(1.0f, 0.0f, 1.0f, 0.8f));
  		CQuad2 = MakeColoredQuad(Vector2(150, 50), Vector2(200, 200), Vector4(1.0f, 1.0f, 0.0f, 0.8f));
  		CQuad3 = MakeColoredQuad(Vector2(10, 510), Vector2(200, 200), Vector4(0.0f, 0.0f, 0.0f, 0.7f));
-
+ 		
+ 		text_batch TBatch;
+ 		// InitTextBatch(&TBatch, "c:/windows/fonts/times.ttf", 16);
+		InitTextBatch(&TBatch, "c:/windows/fonts/arial.ttf", 16);
 		Vector2 Top = Vector2(1.0f, 2.0f);
 		Vector2 Bottom = Vector2(2.0f, 3.0f);
 		Vector2 ResultS = Top + Bottom;
@@ -88,5 +93,7 @@ GameUpdateAndRender(game_input *Input)
 	
 	DrawQuadBatch(&GuiBatch);
 	DrawQuadBatch(&ColoredQuadBatch);
+
+	//DrawText("Hello World", 10, 20);
 	/*=====  End of Game Render  ======*/
 }
