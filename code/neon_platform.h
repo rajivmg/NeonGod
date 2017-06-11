@@ -1,17 +1,26 @@
 #ifndef NEON_PLATFORM_H
 #define NEON_PLATFORM_H
 
+#ifdef _MSC_VER
+	#define WINDOWS
+#endif
+
 #include <stdint.h>
 
 #define local_persist static
 #define global_variable static
 
+#ifdef DEBUG_BUILD
 #define Assert(Exp) if(!(Exp)) {*(volatile int *)0 = 0;}
+#else
+#define Assert(Exp)
+#endif
+
 #define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
 
 #define KILOBYTE(X) 1024LL * (X)
 #define MEGABYTE(X) 1024LL * KILOBYTE(X)
-#define GIGABYTE(X) 1024LL * MEGABYTE(X) // @CHECK: is LL required
+#define GIGABYTE(X) 1024LL * MEGABYTE(X) // @CHECK: if LL required
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -26,18 +35,12 @@ typedef s32		 b32;
 typedef float 	 r32;
 typedef double 	 r64;
 
-//
 struct read_file_result
 {
 	u32		ContentSize;
 	void 	*Content;
 };
 
-read_file_result ReadFile(const char *Filename);
-void FreeFileMemory(read_file_result *ReadFileResult);
-void WriteFile(const char *Filename, u32 BytesToWrite, void *FileContent);
-
-//
 struct game_button_state
 {
 	int HalfTransitionCount;
@@ -66,10 +69,8 @@ struct game_input
 	game_controller_input Controllers[MAX_CONTROLLER_COUNT];
 };
 
-//
-inline void GetWindowSize(u32 *Width, u32 *Height);
-inline s32 GetWindowWidth();
-inline s32 GetWindowHeight();
+struct platform_t;
+extern platform_t *Platform;
 
 inline game_controller_input*
 GetController(game_input *Input, u8 Index)

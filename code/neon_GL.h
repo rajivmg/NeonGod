@@ -16,6 +16,8 @@
 #define GL_STATIC_DRAW                    0x88E4
 #define GL_DYNAMIC_DRAW                   0x88E8
 
+#define GL_DEBUG_OUTPUT_SYNCHRONOUS       0x8242
+
 typedef char GLchar;
 typedef ptrdiff_t GLintptr;
 typedef ptrdiff_t GLsizeiptr;
@@ -49,11 +51,21 @@ GLPROC(void,	EnableVertexAttribArray, GLuint index)\
 GLPROC(GLint,	GetUniformLocation, GLuint program, const GLchar *name)\
 GLPROC(void,	Uniform1i, GLint location, GLint v0)\
 GLPROC(void, 	UniformMatrix4fv, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)\
-GLPROC(void,	ActiveTexture, GLenum texture)\
-//GLPROC(void, 	Finish, void)
+GLPROC(void,	ActiveTexture, GLenum texture)
+
+#ifdef NEON_DEBUG_GL
+	#define GL_Assert(Exp) if(!(Exp)) {*(volatile int *)0 = 0;}
+	#define GL_DEBUG_PROC(Name) void (GLAPI  Name)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam)
+	typedef GL_DEBUG_PROC(*GLDEBUGPROC);
+	#define GLDEBUGPROCLIST \
+	GLPROC(void, 	DebugMessageCallback, GLDEBUGPROC callback, void * userParam)
+#else
+	#define GLDEBUGPROCLIST
+#endif
 
 #define GLPROC(Ret, Name, ...) typedef Ret GLAPI gl_type_##Name (__VA_ARGS__); extern gl_type_##Name *gl##Name;
 GLPROCLIST
+GLDEBUGPROCLIST
 #undef GLPROC
 
 // typedef void 	GLAPI glUseProgram (GLuint program);
@@ -64,6 +76,7 @@ GLPROCLIST
  
 #define GLPROC(Ret, Name, ...) gl_type_##Name *gl##Name;
 GLPROCLIST
+GLDEBUGPROCLIST
 #undef GLPROC
 bool InitGL()
 {
@@ -76,6 +89,7 @@ bool InitGL()
 		OutputDebugStringA("NEON_GL: gl" #Name "couldn't be loaded!\n"); \
 	}
 GLPROCLIST
+GLDEBUGPROCLIST
 #undef GLPROC
 
 // glUseProgram = (gl_type_UseProgram *)wglGetProcAddress("glUseProgram");
@@ -84,5 +98,27 @@ GLPROCLIST
 return true;
 }
 #endif //NEON_GL_LOADER
+
+#ifdef NEON_DEBUG_GL
+GL_DEBUG_PROC(OpenGLDebugCallback)
+{
+	char *Message = (char *)message;
+	GL_Assert(!"OpenGL Debug Error");
+}
+
+void EnableGLDebug()
+{
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(&OpenGLDebugCallback, 0);
+}
+
+void DisableGLDebug()
+{
+	glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+}
+#else
+	void EnableGLDebug() {}
+	void DisableGLDebug() {}
+#endif //NEON_DEBUG_GL
 
 #endif //NEON_GL_H

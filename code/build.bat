@@ -1,7 +1,7 @@
 @echo off
 
-set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -W4 -wd4201 -wd4100 -wd4189 -wd4505 -DINTERNAL_BUILD=1 -DSLOW_BUILD=1 -D_CRT_SECURE_NO_WARNINGS -FC -Z7 -I ../neongod/include
-set CommonLinkerFlags=-opt:ref user32.lib gdi32.lib opengl32.lib SDL2main.lib SDL2.lib glew32.lib freetypeMTd.lib
+set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -W4 -wd4201 -wd4100 -wd4189 -wd4505 -DDEBUG_BUILD=1 -DOPENGL=1 -D_CRT_SECURE_NO_WARNINGS -FC -Z7 -I ../neongod/include
+set CommonLinkerFlags=-opt:ref user32.lib gdi32.lib opengl32.lib SDL2main.lib SDL2.lib freetypeMTd.lib
 REM freetypeMTd.lib
 
 IF NOT EXIST ..\..\build mkdir ..\..\build

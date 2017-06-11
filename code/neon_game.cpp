@@ -1,10 +1,8 @@
 #include "neon_game.h"
 #include "neon_renderer.h"
-#include "neon_texture_loader.h"
-#include <GL/glew.h>
+#include "neon_texture.h"
 
-void 
-GameUpdateAndRender(game_input *Input)
+void GameUpdateAndRender(game_input *Input)
 {
 	/*===================================
 	=            Game Update            =
@@ -19,7 +17,7 @@ GameUpdateAndRender(game_input *Input)
 		{
 			if(Controller->Up.EndedDown && Controller->Up.HalfTransitionCount == 1)
 			{
-				SDL_Log("Go Up!");
+				Platform->Log(INFO,"Go Up!");
 			}
 		}
 	}
@@ -33,60 +31,63 @@ GameUpdateAndRender(game_input *Input)
 	===================================*/
 	local_persist shader QuadShader;
 	local_persist shader ColoredQuadShader;
-	local_persist texture *GuiTexture;
+	local_persist texture GuiTexture;
 	local_persist b32 ShaderAndTextureSet = false;
 	local_persist quad_batch GuiBatch = {};
 	local_persist quad_batch ColoredQuadBatch = {};
-	local_persist quad *TestQuad = {}; 
+	local_persist quad TestQuad = {}; 
 	local_persist quad_colored CQuad1 = {};
 	local_persist quad_colored CQuad2 = {};
 	local_persist quad_colored CQuad3 = {};
+	local_persist text_batch TBatch;
 
 	if(!ShaderAndTextureSet)
 	{
-		InitQuadBatch(&GuiBatch, QUAD, MEGABYTE(8));
+		InitQuadBatch(&GuiBatch, QUAD, MEGABYTE(1));
 
-		read_file_result V1Src = ReadFile("quad_vert.glsl");
-		read_file_result F1Src = ReadFile("quad_frag.glsl");
+		read_file_result V1Src = Platform->ReadFile("quad_vert.glsl");
+		read_file_result F1Src = Platform->ReadFile("quad_frag.glsl");
+		
 		CreateShader(&QuadShader, &V1Src, &F1Src);
-		FreeFileMemory(&V1Src);
-		FreeFileMemory(&F1Src);
-		SetShader(&GuiBatch, &QuadShader);
 
-	 	GuiTexture = LoadTextureRGBA("debug_art.bmp");
-		SetTextureRGBA(&GuiBatch, GuiTexture);
-		// DebugSaveAsTGA("save_test.tga",GuiTexture);
-		SaveAsTGA("test_tga.tga", GuiTexture);
-		FreeTextureMemory(GuiTexture);
+		Platform->FreeFileMemory(&V1Src);
+		Platform->FreeFileMemory(&F1Src);
+
+		SetBatchShader(&GuiBatch, &QuadShader);
+
+	 	// GuiTexture = LoadTextureFromFile("debug_art.tga");
+	 	GuiTexture.LoadFromFile("debug_art.tga");
+		SetBatchTexture(&GuiBatch, &GuiTexture);
+		//FreeTextureMemory(GuiTexture);
+		GuiTexture.FreeMemory();
+
 		ShaderAndTextureSet = true;
 
 		InitQuadBatch(&ColoredQuadBatch, QUAD_COLORED, MEGABYTE(1));
 
-		read_file_result V2Src = ReadFile("quad_colored_vert.glsl");
-		read_file_result F2Src = ReadFile("quad_colored_frag.glsl");
+		read_file_result V2Src = Platform->ReadFile("quad_colored_vert.glsl");
+		read_file_result F2Src = Platform->ReadFile("quad_colored_frag.glsl");
 
 		CreateShader(&ColoredQuadShader, &V2Src, &F2Src);
-		FreeFileMemory(&V2Src);
-		FreeFileMemory(&F2Src);
-		SetShader(&ColoredQuadBatch, &ColoredQuadShader);
+		Platform->FreeFileMemory(&V2Src);
+		Platform->FreeFileMemory(&F2Src);
+		SetBatchShader(&ColoredQuadBatch, &ColoredQuadShader);
 
- 		TestQuad = MakeQuad(Vector2(0, 0), Vector2((r32)GetWindowWidth(), (r32)GetWindowHeight()),
-								Vector4(1.0f, 1.0f, 0.0f, 1.0f),
-								Vector4(0.0f, 0.0f, 1.0f, 1.0f));
- 		CQuad1 = MakeColoredQuad(Vector2(50, 50), Vector2(200, 200), Vector4(1.0f, 0.0f, 1.0f, 0.8f));
- 		CQuad2 = MakeColoredQuad(Vector2(150, 50), Vector2(200, 200), Vector4(1.0f, 1.0f, 0.0f, 0.8f));
- 		CQuad3 = MakeColoredQuad(Vector2(10, 510), Vector2(200, 200), Vector4(0.0f, 0.0f, 0.0f, 0.7f));
+ 		TestQuad = Quad(vec2(0, 0), vec2((r32)Platform->Width, (r32)Platform->Height),
+						vec4(0.0f, 0.0f, 1.0f, 1.0f));
+ 		CQuad1 = ColorQuad(vec2(50, 50), vec2(200, 200), vec4(1.0f, 0.0f, 1.0f, 0.8f));
+ 		CQuad2 = ColorQuad(vec2(150, 50), vec2(200, 200), vec4(1.0f, 1.0f, 0.0f, 0.8f));
+ 		CQuad3 = ColorQuad(vec2(10, 510), vec2(200, 200), vec4(0.0f, 0.0f, 0.0f, 0.7f));
  		
- 		text_batch TBatch;
- 		// InitTextBatch(&TBatch, "c:/windows/fonts/times.ttf", 16);
-		InitTextBatch(&TBatch, "c:/windows/fonts/arial.ttf", 16);
-		Vector2 Top = Vector2(1.0f, 2.0f);
-		Vector2 Bottom = Vector2(2.0f, 3.0f);
-		Vector2 ResultS = Top + Bottom;
-		Vector4 P = Vector4(-Top, -Bottom);
+ 		InitTextBatch(&TBatch, "Inconsolata-Regular.ttf", 32, 2);
+
+		vec2 Top = vec2(1.0f, 2.0f);
+		vec2 Bottom = vec2(2.0f, 3.0f);
+		vec2 ResultS = Top + Bottom;
+		vec4 P = vec4(-Top, -Bottom);
 	}
 
-	PushQuad(&GuiBatch, TestQuad);
+	PushQuad(&GuiBatch, &TestQuad);
 	PushQuad(&ColoredQuadBatch, &CQuad1);
 	PushQuad(&ColoredQuadBatch, &CQuad2);
 	PushQuad(&ColoredQuadBatch, &CQuad3);
@@ -94,6 +95,6 @@ GameUpdateAndRender(game_input *Input)
 	DrawQuadBatch(&GuiBatch);
 	DrawQuadBatch(&ColoredQuadBatch);
 
-	//DrawText("Hello World", 10, 20);
+	DrawGUIText(&TBatch, "R", 10, 10);
 	/*=====  End of Game Render  ======*/
 }

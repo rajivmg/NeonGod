@@ -15,7 +15,7 @@
 ////
 ////
 
-union Vector2
+union vec2
 {
 	r32 Elements[2];
 	struct
@@ -30,15 +30,15 @@ union Vector2
 	{
 		r32 U, V;
 	};
-	inline Vector2();
-	inline Vector2(r32 X, r32 Y);
-	inline Vector2 operator+(Vector2 const & V2);
-	inline Vector2 operator-(Vector2 const & V2);
-	inline Vector2 operator-();
-	inline ~Vector2();
+	inline vec2();
+	inline vec2(r32 X, r32 Y);
+	inline vec2 operator+(vec2 const & V2);
+	inline vec2 operator-(vec2 const & V2);
+	inline vec2 operator-();
+	inline ~vec2();
 };
 
-union Vector3
+union vec3
 {
 	r32 Elements[3];
 	struct
@@ -49,16 +49,16 @@ union Vector3
 	{
 		r32 R, G, B;
 	};
-	inline Vector3();
-	inline Vector3(r32 X, r32 Y, r32 Z);
-	inline Vector3(Vector2 V2, r32 Z);
-	inline Vector3 operator+(Vector3 const & V3);
-	inline Vector3 operator-(Vector3 const & V3);
-	inline Vector3 operator-();
-	inline ~Vector3();
+	inline vec3();
+	inline vec3(r32 X, r32 Y, r32 Z);
+	inline vec3(vec2 V2, r32 Z);
+	inline vec3 operator+(vec3 const & V3);
+	inline vec3 operator-(vec3 const & V3);
+	inline vec3 operator-();
+	inline ~vec3();
 };
 
-union Vector4
+union vec4
 {
 	r32 Elements[4];
 	struct
@@ -69,17 +69,17 @@ union Vector4
 	{
 		r32 R, G, B, A;
 	};
-	inline Vector4();
-	inline Vector4(r32 X, r32 Y, r32 Z, r32 W);
-	inline Vector4(Vector2 V21, Vector2 V22);
-	inline Vector4(Vector3 V3, r32 W);
-	inline Vector4 operator+(Vector4 const & V4);
-	inline Vector4 operator-(Vector4 const & V4);
-	inline Vector4 operator-();
-	inline ~Vector4();
+	inline vec4();
+	inline vec4(r32 X, r32 Y, r32 Z, r32 W);
+	inline vec4(vec2 V21, vec2 V22);
+	inline vec4(vec3 V3, r32 W);
+	inline vec4 operator+(vec4 const & V4);
+	inline vec4 operator-(vec4 const & V4);
+	inline vec4 operator-();
+	inline ~vec4();
 };
 
-union Matrix2
+union mat2
 {
 	r32 Elements[4];
 	struct
@@ -87,11 +87,11 @@ union Matrix2
 		r32 _00, _01;
 		r32 _10, _11;
 	};
-	inline Matrix2();
-	inline ~Matrix2();
+	inline mat2();
+	inline ~mat2();
 };
 
-union Matrix3
+union mat3
 {
 	r32 Elements[9];
 	struct
@@ -100,11 +100,11 @@ union Matrix3
 	 	r32 _10, _11, _12;
 	 	r32 _20, _21, _22;
 	};
-	inline Matrix3();
-	inline ~Matrix3();
+	inline mat3();
+	inline ~mat3();
 };
 
-union Matrix4
+union mat4
 {
 	r32 Elements[16];
 	struct
@@ -114,10 +114,10 @@ union Matrix4
 		r32 _20, _21, _22, _23;
 		r32 _30, _31, _32, _33;
 	};
-	inline Matrix4();
-	inline ~Matrix4();
+	inline mat4();
+	inline ~mat4();
 };
 
-// Vector2 operator+(Vector2 const & A, Vector2 const & B);
+// vec2 operator+(vec2 const & A, vec2 const & B);
 
 #endif
