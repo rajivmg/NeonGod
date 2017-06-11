@@ -55,10 +55,8 @@ void GameUpdateAndRender(game_input *Input)
 
 		SetBatchShader(&GuiBatch, &QuadShader);
 
-	 	// GuiTexture = LoadTextureFromFile("debug_art.tga");
 	 	GuiTexture.LoadFromFile("debug_art.tga");
 		SetBatchTexture(&GuiBatch, &GuiTexture);
-		//FreeTextureMemory(GuiTexture);
 		GuiTexture.FreeMemory();
 
 		ShaderAndTextureSet = true;
@@ -78,8 +76,11 @@ void GameUpdateAndRender(game_input *Input)
  		CQuad1 = ColorQuad(vec2(50, 50), vec2(200, 200), vec4(1.0f, 0.0f, 1.0f, 0.8f));
  		CQuad2 = ColorQuad(vec2(150, 50), vec2(200, 200), vec4(1.0f, 1.0f, 0.0f, 0.8f));
  		CQuad3 = ColorQuad(vec2(10, 510), vec2(200, 200), vec4(0.0f, 0.0f, 0.0f, 0.7f));
- 		
- 		InitTextBatch(&TBatch, "Inconsolata-Regular.ttf", 32, 2);
+
+ 		font *ConsoleFont = new font();
+ 		ConsoleFont->Load("Inconsolata-Regular.ttf", 32);
+
+ 		TBatch.SetFont(ConsoleFont);
 
 		vec2 Top = vec2(1.0f, 2.0f);
 		vec2 Bottom = vec2(2.0f, 3.0f);
@@ -95,6 +96,6 @@ void GameUpdateAndRender(game_input *Input)
 	DrawQuadBatch(&GuiBatch);
 	DrawQuadBatch(&ColoredQuadBatch);
 
-	DrawGUIText(&TBatch, "R", 10, 10);
+	// DrawGUIText(&TBatch, "R", 10, 10);
 	/*=====  End of Game Render  ======*/
 }

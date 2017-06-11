@@ -162,17 +162,48 @@ struct glyph
 	s32  VertAdvance;
 };
 
-struct text_batch
+class font
 {
-	// quad_batch Batch;
+public:
+	glyph 	*Glyphs;
+	u16		FontHeight;
 	texture_atlas Atlas;
-	glyph *Glyphs;
+	bool 	Initialised;
 
-	r32	FontHeight;
+	void Load(char const * FontSrc, u16 aFontHeight);
+
+	font();
+	~font();
 };
 
-void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeigth, u16 Padding);
-void DrawGUIText(text_batch *TextBatch, char const * Text, int X, int Y);
+// struct text_batch
+// {
+// 	quad_batch Batch;
+// 	glyph 	*Glyphs;
+// 	u16		FontHeight;
+// 	texture_atlas Atlas;
+// };
+
+class text_batch
+{
+public:
+	quad_batch Batch;
+	font *Font;
+	bool FontSet;
+
+	void SetFont(font *aFont);
+	void PushText(char const *Text, int X, int Y);
+	void Draw();
+	
+	text_batch();
+	~text_batch();
+};
+
+
+
+// font LoadFont(char const *FontSrc, u16 FontHeigth);
+// void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeigth, u16 Padding);
+// void DrawGUIText(text_batch *TextBatch, char const * Text, int X, int Y);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////

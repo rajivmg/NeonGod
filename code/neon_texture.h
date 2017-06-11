@@ -13,17 +13,6 @@ enum coordinate_convention
 	BOTTOM_LEFT_ZERO
 };
 
-// typedef struct texture
-// {
-// 	s32 	Width;
-// 	s32 	Height;
-// 	void*	Content;
-// 	u32  	ContentSize;
-//   	u8    	BitsPerPixel; //32
-//   	coordinate_convention Convention;
-//   	bool 	Initialised;
-// } texture;
-
 #pragma pack(push, 1)
 typedef struct tga_header
 {
@@ -45,7 +34,8 @@ typedef struct tga_header
 
 /**
  * texture
- *	
+ *
+ *	purpose: Load, rotate & free texture.
  */
 class texture
 {
@@ -64,11 +54,6 @@ public:
 	texture();
 	~texture();
 };
-
-
-// texture*  LoadTextureFromFile(char const * Filename);
-// void      FlipTextureVertically(texture *Texture);
-// void      FreeTextureMemory(texture *Texture);
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
@@ -100,23 +85,6 @@ struct binary_t_node
 	bool Filled;
 };
 
-// struct texture_atlas
-// {
-// 	void	*Content;
-// 	u32		ContentSize;
-// 	u32		Width;
-// 	u32		Height;
-// 	u32		Padding;
-// 	bool  	Initialised;
-
-// 	binary_t_node Node;
-// 	coordinate_convention Convention;
-// };
-
-// void	InitTextureAtlas(texture_atlas *Atlas, u32 Width, u32 Heigth, u16 Padding);
-// texture_coordinates	PackTexture(texture_atlas *Atlas, texture *Texture);
-// void 	ConvertAtlasToTexture(texture_atlas *Atlas, texture *Texture);
-
 class texture_atlas
 {
 public:
@@ -130,9 +98,10 @@ public:
 	binary_t_node Node;
 	coordinate_convention Convention;
 
-	void TextureAtlas(u32 AtlasWidth, u32 AtlasHeigth, u16 AtlasPadding);
+	void Initialise(u32 AtlasWidth, u32 AtlasHeigth, u16 AtlasPadding);
 	texture_coordinates PackTexture(texture *Texture);
 	void FreeMemory();
+	texture ToTexture();
 
 	texture_atlas();
 	~texture_atlas();

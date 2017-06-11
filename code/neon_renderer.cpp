@@ -97,7 +97,6 @@ shader CreateShader(read_file_result *VsFile, read_file_result *FsFile)
 quad Quad(vec2 Origin, vec2 Size, vec4 UVCoords)
 {
 	quad QuadVertex;
-
 /*
 	D--------C
 	|  U 	/|
@@ -217,10 +216,9 @@ quad Quad(vec2 Origin, vec2 Size, vec4 UVCoords)
 	return QuadVertex;
 }
 
-quad_colored ColorQuad(vec2 Origin, vec2 Size,
-						vec4 Color)
+quad_colored ColorQuad(vec2 Origin, vec2 Size, vec4 Color)
 {
-	// quad_colored *QuadVertex = (quad_colored *)malloc(sizeof(quad_colored)); 
+
 	quad_colored QuadVertex;
 	// Upper triangle
 	// D
@@ -314,7 +312,6 @@ void SetBatchTexture(quad_batch *QuadBatch, texture *Texture)
 	if(Texture->Convention == TOP_LEFT_ZERO)
 	{
 		Texture->FlipVertically();
-		// FlipTextureVertically(Texture);
 	}
 
 	QuadBatch->Tex = TextureManager(GET_TEXTURE_UNIT);
@@ -528,8 +525,23 @@ u16 TextureManager(tex_command Command, u16 TexUnit)
 ////
 ////	Text rendering functions
 ////
-void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight, u16 Padding)
+
+font::font()
 {
+	Initialised = false;
+}
+
+font::~font()
+{
+
+}
+
+void font::Load(char const * FontSrc, u16 aFontHeight)
+{
+	FontHeight = aFontHeight;
+	Glyphs = (glyph *)malloc(sizeof(glyph) * (128-32));
+	Atlas.Initialise(512, 512, 2); // padding = 2
+
 	FT_Library FTLib;
 	FT_Face Face;
 
@@ -554,12 +566,6 @@ void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight, 
 	Error = FT_Set_Pixel_Sizes(Face, 0, FontHeight);
 	Assert(Error == 0);
 
-	TextBatch->FontHeight = FontHeight;
-	TextBatch->Glyphs = (glyph *)malloc(sizeof(glyph) * (128-32));
-
-	// InitTextureAtlas(&TextBatch->Atlas, 512, 512, Padding);
-	TextBatch->Atlas.TextureAtlas(512, 512, Padding);
-
 	texture *GlyphTexture = (texture *)malloc(sizeof(texture));
 	for(int CIndex = 32; CIndex < 128; ++CIndex)
 	{
@@ -573,15 +579,11 @@ void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight, 
 			FT_Render_Glyph(Face->glyph, FT_RENDER_MODE_NORMAL);
 		}
 
-		glyph *Glyph = TextBatch->Glyphs + (CIndex - 32);
+		glyph *Glyph = Glyphs + (CIndex - 32);
 		Glyph->BitmapWidth = Face->glyph->bitmap.width;
 		Glyph->BitmapHeight = Face->glyph->bitmap.rows;
 		
 		u8 *GlyphBitmap = Face->glyph->bitmap.buffer;
-		// Glyph->Bitmap = malloc(Glyph->Width * Glyph->Height * 1); // !!!Free memory
-		// memcpy(Glyph->Bitmap,
-		// 		Face->glyph->bitmap.buffer,
-		// 		Glyph->Width * Glyph->Height);
 
 		FT_Glyph_Metrics *Metrics = &Face->glyph->metrics;
 
@@ -617,7 +619,7 @@ void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight, 
 			snprintf(Temp, 20, "%d.tga", CIndex);
 			// DebugTextureSave(Temp, GlyphTexture);
 
-			Glyph->Coordinates = TextBatch->Atlas.PackTexture(GlyphTexture); //PackTexture(&TextBatch->Atlas, GlyphTexture);
+			Glyph->Coordinates = Atlas.PackTexture(GlyphTexture);
 		}
 
 		// After texture is copied to texture atlas
@@ -626,24 +628,156 @@ void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight, 
 			free(GlyphTexture->Content);
 		}
 	}
+
+	Initialised = true;
 }
 
-void DrawGUIText(text_batch *TextBatch, char const * Text, int X, int Y)
+
+text_batch::text_batch()
 {
-	// quad_batch Batch;
-	// InitQuadBatch(&Batch, QUAD, KILOBYTE(32));
-	// // SetBatchTexture()
-	// glyph *Glyph = TextBatch->Glyphs + (int)Text[0];
-	// quad *CharQuad = MakeQuad(vec2(X, Y), vec2(Glyph->BitmapWidth, Glyph->BitmapHeight),
-	// 							vec4(1.0f, 1.0f, 0.0f, 1.0f),
-	// 							vec4(Glyph->Coordinates.BL_X, Glyph->Coordinates.BL_Y,
-	// 								Glyph->Coordinates.TR_X, Glyph->Coordinates.TR_Y));
+	FontSet = false;
+}
 
-
-	// PushQuad(&Batch, &CharQuad);
-	// DrawQuadBatch(&Batch);
+text_batch::~text_batch()
+{
 
 }
+
+void text_batch::SetFont(font *aFont)
+{
+	Assert(aFont->Initialised);
+	Font = aFont;
+	FontSet = true;
+
+	// initialise Batch
+	texture FontTexture = Font->Atlas.ToTexture();
+}
+
+void text_batch::PushText(char const *Text, int X, int Y)
+{
+	Assert(FontSet);
+	
+}
+
+void text_batch::Draw()
+{
+
+}
+
+// void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeight, u16 Padding)
+// {
+// 	FT_Library FTLib;
+// 	FT_Face Face;
+
+// 	int Error = FT_Init_FreeType(&FTLib);
+// 	if(Error)
+// 	{
+// 		Assert(!"Error initialising the FreeType library.");
+// 	}
+
+// 	read_file_result FontData = Platform->ReadFile(FontSrc);
+
+// 	Error = FT_New_Memory_Face(FTLib, (const FT_Byte *)FontData.Content, FontData.ContentSize, 0, &Face);
+// 	if(Error == FT_Err_Unknown_File_Format)
+// 	{
+// 		Assert(!"File format is not supported.");
+// 	}
+// 	else if(Error)
+// 	{
+// 		Assert(!"File could not be opened or read.");
+// 	}
+
+// 	Error = FT_Set_Pixel_Sizes(Face, 0, FontHeight);
+// 	Assert(Error == 0);
+
+// 	TextBatch->FontHeight = FontHeight;
+// 	TextBatch->Glyphs = (glyph *)malloc(sizeof(glyph) * (128-32));
+
+// 	TextBatch->Atlas.Initialise(512, 512, Padding);
+
+// 	texture *GlyphTexture = (texture *)malloc(sizeof(texture));
+// 	for(int CIndex = 32; CIndex < 128; ++CIndex)
+// 	{
+// 		int GlyphIndex = FT_Get_Char_Index(Face, CIndex);
+	
+// 		Error = FT_Load_Glyph(Face, GlyphIndex, FT_LOAD_DEFAULT);
+// 		Assert(Error == 0);
+		
+// 		if(Face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+// 		{
+// 			FT_Render_Glyph(Face->glyph, FT_RENDER_MODE_NORMAL);
+// 		}
+
+// 		glyph *Glyph = TextBatch->Glyphs + (CIndex - 32);
+// 		Glyph->BitmapWidth = Face->glyph->bitmap.width;
+// 		Glyph->BitmapHeight = Face->glyph->bitmap.rows;
+		
+// 		u8 *GlyphBitmap = Face->glyph->bitmap.buffer;
+// 		// Glyph->Bitmap = malloc(Glyph->Width * Glyph->Height * 1); // !!!Free memory
+// 		// memcpy(Glyph->Bitmap,
+// 		// 		Face->glyph->bitmap.buffer,
+// 		// 		Glyph->Width * Glyph->Height);
+
+// 		FT_Glyph_Metrics *Metrics = &Face->glyph->metrics;
+
+// 		//Glyph->HoriBearingX =
+		
+// 		GlyphTexture->Width = Glyph->BitmapWidth;
+// 		GlyphTexture->Height = Glyph->BitmapHeight;
+// 		GlyphTexture->ContentSize = GlyphTexture->Width * GlyphTexture->Height * 4;
+// 		GlyphTexture->Convention = TOP_LEFT_ZERO;
+// 		if(GlyphTexture->ContentSize != 0)
+// 		{
+// 			GlyphTexture->Content = malloc(GlyphTexture->ContentSize);
+// 			Assert(GlyphTexture != 0);
+// 			memset(GlyphTexture->Content, 255, GlyphTexture->ContentSize);
+// 		}
+		
+// 		u32 *DestTexel = (u32 *)GlyphTexture->Content;
+// 		u8 *SrcTexel = (u8 *)GlyphBitmap;
+
+// 		// Convert Glpyh's 8bit texture to 32bit texture
+// 		for(int x = 0; x < GlyphTexture->Width * GlyphTexture->Height; ++x)
+// 		{
+// 			u8 *DestGreen = (u8 *)DestTexel+3;
+// 			*DestGreen = *SrcTexel;
+
+// 			DestTexel++;
+// 			SrcTexel++;
+// 		}
+
+// 		if(GlyphTexture->ContentSize != 0)
+// 		{
+// 			char Temp[20];
+// 			snprintf(Temp, 20, "%d.tga", CIndex);
+// 			// DebugTextureSave(Temp, GlyphTexture);
+
+// 			Glyph->Coordinates = TextBatch->Atlas.PackTexture(GlyphTexture);
+// 		}
+
+// 		// After texture is copied to texture atlas
+// 		if(GlyphTexture->ContentSize != 0)
+// 		{
+// 			free(GlyphTexture->Content);
+// 		}
+// 	}
+// }
+
+// void DrawGUIText(text_batch *TextBatch, char const * Text, int X, int Y)
+// {
+// 	quad_batch Batch;
+// 	InitQuadBatch(&Batch, QUAD, KILOBYTE(32));
+// 	// SetBatchTexture()
+// 	glyph *Glyph = TextBatch->Glyphs + (int)Text[0];
+// 	quad *CharQuad = MakeQuad(vec2(X, Y), vec2(Glyph->BitmapWidth, Glyph->BitmapHeight),
+// 								vec4(1.0f, 1.0f, 0.0f, 1.0f),
+// 								vec4(Glyph->Coordinates.BL_X, Glyph->Coordinates.BL_Y,
+// 									Glyph->Coordinates.TR_X, Glyph->Coordinates.TR_Y));
+
+
+// 	PushQuad(&Batch, &CharQuad);
+// 	DrawQuadBatch(&Batch);
+// }
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
