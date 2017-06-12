@@ -20,7 +20,10 @@
 
 #define KILOBYTE(X) 1024LL * (X)
 #define MEGABYTE(X) 1024LL * KILOBYTE(X)
-#define GIGABYTE(X) 1024LL * MEGABYTE(X) // @CHECK: if LL required
+#define GIGABYTE(X) 1024LL * MEGABYTE(X) // @CHECK: if LL required\
+
+#define SAFE_FREE(x) { if(x) { free(x); (x) = 0;} }
+#define SAFE_DELETE(x) { if(x) { delete(x); (x) = 0;} }
 
 typedef uint64_t u64;
 typedef uint32_t u32;

@@ -36,14 +36,15 @@ void GameUpdateAndRender(game_input *Input)
 	local_persist quad_batch GuiBatch = {};
 	local_persist quad_batch ColoredQuadBatch = {};
 	local_persist quad TestQuad = {}; 
-	local_persist quad_colored CQuad1 = {};
-	local_persist quad_colored CQuad2 = {};
-	local_persist quad_colored CQuad3 = {};
+	local_persist color_quad CQuad1 = {};
+	local_persist color_quad CQuad2 = {};
+	local_persist color_quad CQuad3 = {};
 	local_persist text_batch TBatch;
 
 	if(!ShaderAndTextureSet)
 	{
-		InitQuadBatch(&GuiBatch, QUAD, MEGABYTE(1));
+		// InitQuadBatch(&GuiBatch, QUAD, MEGABYTE(1));
+		GuiBatch.Initialise(QUAD, MEGABYTE(1));
 
 		read_file_result V1Src = Platform->ReadFile("quad_vert.glsl");
 		read_file_result F1Src = Platform->ReadFile("quad_frag.glsl");
@@ -53,15 +54,18 @@ void GameUpdateAndRender(game_input *Input)
 		Platform->FreeFileMemory(&V1Src);
 		Platform->FreeFileMemory(&F1Src);
 
-		SetBatchShader(&GuiBatch, &QuadShader);
+		// SetBatchShader(&GuiBatch, &QuadShader);
+		GuiBatch.SetShader(&QuadShader);
 
 	 	GuiTexture.LoadFromFile("debug_art.tga");
-		SetBatchTexture(&GuiBatch, &GuiTexture);
+		// SetBatchTexture(&GuiBatch, &GuiTexture);
+		GuiBatch.SetTexture(&GuiTexture);
 		GuiTexture.FreeMemory();
 
 		ShaderAndTextureSet = true;
 
-		InitQuadBatch(&ColoredQuadBatch, QUAD_COLORED, MEGABYTE(1));
+		// InitQuadBatch(&ColoredQuadBatch, COLOR_QUAD, MEGABYTE(1));
+		ColoredQuadBatch.Initialise(COLOR_QUAD, MEGABYTE(1));
 
 		read_file_result V2Src = Platform->ReadFile("quad_colored_vert.glsl");
 		read_file_result F2Src = Platform->ReadFile("quad_colored_frag.glsl");
@@ -69,7 +73,8 @@ void GameUpdateAndRender(game_input *Input)
 		CreateShader(&ColoredQuadShader, &V2Src, &F2Src);
 		Platform->FreeFileMemory(&V2Src);
 		Platform->FreeFileMemory(&F2Src);
-		SetBatchShader(&ColoredQuadBatch, &ColoredQuadShader);
+		// SetBatchShader(&ColoredQuadBatch, &ColoredQuadShader);
+		ColoredQuadBatch.SetShader(&ColoredQuadShader);
 
  		TestQuad = Quad(vec2(0, 0), vec2((r32)Platform->Width, (r32)Platform->Height),
 						vec4(0.0f, 0.0f, 1.0f, 1.0f));
@@ -77,9 +82,9 @@ void GameUpdateAndRender(game_input *Input)
  		CQuad2 = ColorQuad(vec2(150, 50), vec2(200, 200), vec4(1.0f, 1.0f, 0.0f, 0.8f));
  		CQuad3 = ColorQuad(vec2(10, 510), vec2(200, 200), vec4(0.0f, 0.0f, 0.0f, 0.7f));
 
- 		font *ConsoleFont = new font();
+		font *ConsoleFont = new font();
  		ConsoleFont->Load("Inconsolata-Regular.ttf", 32);
-
+ 		
  		TBatch.SetFont(ConsoleFont);
 
 		vec2 Top = vec2(1.0f, 2.0f);
@@ -88,13 +93,15 @@ void GameUpdateAndRender(game_input *Input)
 		vec4 P = vec4(-Top, -Bottom);
 	}
 
-	PushQuad(&GuiBatch, &TestQuad);
-	PushQuad(&ColoredQuadBatch, &CQuad1);
-	PushQuad(&ColoredQuadBatch, &CQuad2);
-	PushQuad(&ColoredQuadBatch, &CQuad3);
+	GuiBatch.PushQuad(&TestQuad);
+	// PushQuad(&GuiBatch, &TestQuad);
+	ColoredQuadBatch.PushQuad(&CQuad1);
+	ColoredQuadBatch.PushQuad(&CQuad2);
+	ColoredQuadBatch.PushQuad(&CQuad3);
 	
-	DrawQuadBatch(&GuiBatch);
-	DrawQuadBatch(&ColoredQuadBatch);
+	// DrawQuadBatch(&GuiBatch);
+	GuiBatch.Draw();
+	ColoredQuadBatch.Draw();
 
 	// DrawGUIText(&TBatch, "R", 10, 10);
 	/*=====  End of Game Render  ======*/

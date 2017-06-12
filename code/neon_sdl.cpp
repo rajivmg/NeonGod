@@ -12,7 +12,7 @@
 #include <SDL2/SDL.h>
 
 #define NEON_INIT_GL
-//#define NEON_DEBUG_GL
+#define NEON_DEBUG_GL
 #include "neon_GL.h"
 #include "neon_platform.h"
 #include "neon_sdl.h"

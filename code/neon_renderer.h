@@ -48,13 +48,13 @@ struct quad
 {
 	GLfloat Content[54];
 };
-struct quad_colored
+struct color_quad
 {
 	GLfloat Content[42];
 };
 
 quad Qaud(vec2 Origin, vec2 Size, vec4 UVCoords);
-quad_colored ColorQuad(vec2 Origin, vec2 Size, vec4 Color);
+color_quad ColorQuad(vec2 Origin, vec2 Size, vec4 Color);
 
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
@@ -76,11 +76,18 @@ struct mem_buffer
 ////
 ////	Shader
 ////
-struct shader
+class shader
 {
+public:
 	GLuint Vs;
 	GLuint Fs;
 	GLuint Program;
+	bool ProgramAvailable;
+
+	void CreateProgramFromFiles(read_file_result *VsFile, read_file_result *FsFile);
+
+	shader();
+	~shader();
 };
 
 void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile);
@@ -106,39 +113,76 @@ u16 TextureManager(tex_command Command, u16 TexUnit = -1);
 enum batch_type
 {
 	QUAD,
-	QUAD_COLORED,
+	COLOR_QUAD,
 	MESH
 };
 
-struct quad_batch
+// struct quad_batch
+// {
+// 	GLuint VBO;
+// 	GLuint VAO;
+// 	GLuint Tex;
+// 	shader Shader;	
+// 	u16	TexUnit;
+	
+// 	mem_buffer Buffer;
+	
+// 	batch_type Type;
+	
+// 	b32 GPUBufferAvailable;
+// 	b32 ShaderAvailable;
+// 	b32 TextureAvailable;
+// 	u32 QuadCount;
+
+// 	mat4 Proj;
+// };
+
+class quad_batch
 {
-	GLuint VBO;
-	GLuint VAO;
-	GLuint Tex;
-	shader Shader;	
-	u16	TexUnit;
+public:
+	GLuint 	VBO;
+	GLuint 	VAO;
+	GLuint 	TEX;
+	
+	shader 	Shader;	
+	u16		TextureUnit;
+
+	u32 	QuadCount;
 	
 	mem_buffer Buffer;
 	
-	batch_type Type;
+	batch_type QuadType;
 	
-	b32 GPUBufferAvailable;
-	b32 ShaderAvailable;
-	b32 TextureAvailable;
-	u32 QuadCount;
+	bool Initialised;
+	bool GPUBufferAvailable;
+	bool ShaderAvailable;
+	bool TextureAvailable;
 
-	mat4 Proj;
+	void Initialise(batch_type aQuadType, u32 BufferSize);
+	void SetTexture(texture *Texture);
+	void SetShader(shader *aShader);
+	void PushQuad(quad *Quad);
+	void PushQuad(color_quad *Quad);
+	void Draw();
+
+	quad_batch();
+	~quad_batch();
+
+private:
+	void CreateGPUBuffer();
+	void UpdateGPUBuffer();
+	void Flush();
 };
 
-void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize);
-void SetBatchTexture(quad_batch *QuadBatch, texture *Texture);
-void SetBatchShader(quad_batch *QuadBatch, shader *_Shader);
-void CreateGPUBuffer(quad_batch *QuadBatch);
-void UpdateGPUBuffer(quad_batch *QuadBatch);
-void PushQuad(quad_batch *QuadBatch, quad *Quad);
-void PushQuad(quad_batch *QuadBatch, quad_colored *Quad);
-void DrawQuadBatch(quad_batch *QuadBatch);
-void FlushBatch(quad_batch *QuadBatch);
+// void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize);
+// void SetBatchTexture(quad_batch *QuadBatch, texture *Texture);
+// void SetBatchShader(quad_batch *QuadBatch, shader *_Shader);
+// void CreateGPUBuffer(quad_batch *QuadBatch);
+// void UpdateGPUBuffer(quad_batch *QuadBatch);
+// void PushQuad(quad_batch *QuadBatch, quad *Quad);
+// void PushQuad(quad_batch *QuadBatch, color_quad *Quad);
+// void DrawQuadBatch(quad_batch *QuadBatch);
+// void FlushBatch(quad_batch *QuadBatch);
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
@@ -176,14 +220,6 @@ public:
 	~font();
 };
 
-// struct text_batch
-// {
-// 	quad_batch Batch;
-// 	glyph 	*Glyphs;
-// 	u16		FontHeight;
-// 	texture_atlas Atlas;
-// };
-
 class text_batch
 {
 public:
@@ -194,16 +230,10 @@ public:
 	void SetFont(font *aFont);
 	void PushText(char const *Text, int X, int Y);
 	void Draw();
-	
+
 	text_batch();
 	~text_batch();
 };
-
-
-
-// font LoadFont(char const *FontSrc, u16 FontHeigth);
-// void InitTextBatch(text_batch *TextBatch, char const * FontSrc, u16 FontHeigth, u16 Padding);
-// void DrawGUIText(text_batch *TextBatch, char const * Text, int X, int Y);
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////

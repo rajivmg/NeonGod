@@ -8,15 +8,12 @@
 texture::texture()
 {
 	Initialised = false;
+	Content = 0;
 }
 
 texture::~texture()
 {
-	if(Initialised && Content != 0)
-	{
-		free(Content);
-		Content = 0;
-	}
+	//SAFE_FREE(Content);
 }
 
 // @NOTE: image row start with bottom left and end with top right.
@@ -111,12 +108,7 @@ void texture::FlipVertically()
 void texture::FreeMemory()
 {
 	Assert(Initialised);
-
-	if(Content != 0)
-	{
-		free(Content);
-		Content = 0;
-	}
+	SAFE_FREE(Content);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -175,18 +167,16 @@ void DebugTextureSave_(char const * Filename, texture *Texture)
 ////
 ////	TextureAtlas functions
 ////
+
 texture_atlas::texture_atlas()
 {
 	Initialised = false;
+	Content = 0;
 }
 
 texture_atlas::~texture_atlas()
 {
-	if(Initialised && Content != 0)
-	{
-		free(Content);
-		Content = 0;
-	}
+
 }
 
 void texture_atlas::Initialise(u32 AtlasWidth, u32 AtlasHeigth, u16 AtlasPadding)
@@ -287,7 +277,6 @@ static binary_t_node* Atlas_Insert(binary_t_node *Node, texture *Texture, u32 Pa
 		if(dw > dh)
 		{
 			// divide vertically
-			// needs testing
 			Node->Child[0]->Rect.OriginX = Node->Rect.OriginX;
 			Node->Child[0]->Rect.OriginY = Node->Rect.OriginY;
 			Node->Child[0]->Rect.Width	 = (Texture->Width + Padding);
@@ -303,7 +292,6 @@ static binary_t_node* Atlas_Insert(binary_t_node *Node, texture *Texture, u32 Pa
 		else
 		{
 			// divide horizontally
-			// needs testing
 			Node->Child[0]->Rect.OriginX = Node->Rect.OriginX;
 			Node->Child[0]->Rect.OriginY = Node->Rect.OriginY;
 			Node->Child[0]->Rect.Width	 = (Texture->Width + Padding);
@@ -379,23 +367,22 @@ texture_coordinates texture_atlas::PackTexture(texture *Texture)
 void texture_atlas::FreeMemory()
 {
 	Assert(Initialised);
-	if(Content != 0)
-	{
-		free(Content);
-		Content = 0;
-	}
+	SAFE_FREE(Content);
 }
 
 texture texture_atlas::ToTexture()
 {
+	// texture *Texture = (texture *)malloc(sizeof(texture));
+	// texture *Texture = new texture();
 	texture Texture;
 
 	Texture.Width  = Width;
 	Texture.Height = Height;
-	Texture.ContentSize =ContentSize;
+	Texture.ContentSize = ContentSize;
 	Texture.Content = malloc(ContentSize);
 	memcpy(Texture.Content, Content, ContentSize);
 	Texture.Convention = TOP_LEFT_ZERO;
-
+	Texture.Initialised = true;
+	
 	return Texture;
 }
