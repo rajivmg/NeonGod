@@ -6,23 +6,20 @@
 #define SDL_MAIN_HANDLED 1
 #endif
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #include <SDL2/SDL.h>
 
-#define NEON_INIT_GL
-#define NEON_DEBUG_GL
-#include "neon_GL.h"
-#include "neon_platform.h"
-#include "neon_sdl.h"
+// #define NEON_INIT_GL
+// #define NEON_DEBUG_GL
+// #include "neon_GL.h"
 
-//
-#include "neon_math.cpp"
-#include "neon_renderer.cpp"
-#include "neon_game.cpp"
-#include "neon_texture.cpp"
-//
+#include "neon_platform.h"
+
+#include <cstdio>
+
+// #include "neon_renderer.h"
+#include <Windows.h>
+
+#include "neon_sdl.h"
 
 platform_t *Platform;
 
@@ -44,7 +41,7 @@ PLATFORM_LOG(Log)
 			SDL_LogMessageV(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_ERROR, Fmt, Arguments);
 			char Temp[200]; 
 			vsnprintf(Temp, 200, Fmt, Arguments);
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", Temp, Platform->Window);
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", Temp, 0);
 			
 			SDL_Event QuitEvent;
 			QuitEvent.type = SDL_QUIT;
@@ -64,11 +61,11 @@ PLATFORM_READ_FILE(ReadFile)
 	read_file_result Result = {};
 	//FILE *Fp;
 	SDL_RWops *Fp = SDL_RWFromFile(Filename, "rb");
-	Platform->Log(INFO, "File: %s read sucessfully\n", Filename);
 	//Fp = fopen(Filename, "rb");
 	Assert(Fp != 0);
 	if(Fp != 0)
 	{
+		Platform->Log(INFO, "File: %s read sucessfully\n", Filename);
 		//fseek(Fp, 0, SEEK_END);
 		SDL_RWseek(Fp, 0, RW_SEEK_END);
 		// long Temp = ftell(Fp);
@@ -130,11 +127,25 @@ PLATFORM_WRITE_FILE(WriteFile)
 		}
 		// fclose(Fp);
 		SDL_RWclose(Fp);
+		Platform->Log(INFO, "File: %s written sucessfully\n", Filename);
 	}
 	else
 	{ 
 		Platform->Log(WARN, "File: %s cannot be opened for writing.\n");
 	}	
+}
+
+void LoadGameCode(game_code *GameCode)
+{	
+	GameCode->Handle = SDL_LoadObject("neon_game.dll");
+	
+	if(GameCode->Handle == 0)
+	{
+		Log(ERR, SDL_GetError());
+	}
+
+	GameCode->GameUpdateAndRender = (game_update_and_render *)SDL_LoadFunction(GameCode->Handle, "GameUpdateAndRender");
+	GameCode->GameCodeLoaded = (game_code_loaded *)SDL_LoadFunction(GameCode->Handle, "GameCodeLoaded");
 }
 
 void SDLProcessKeyboardMessage(game_button_state *NewButtonState, bool IsDown)
@@ -146,7 +157,7 @@ void SDLProcessKeyboardMessage(game_button_state *NewButtonState, bool IsDown)
 	}
 }
 
-void SDLProcessEvents(SDL_Event *Event, game_controller_input *KeyboardController)
+void SDLProcessEvents(SDL_Event *Event, game_input *KeyboardController)
 {
 	switch(Event->type)
 	{
@@ -159,22 +170,22 @@ void SDLProcessEvents(SDL_Event *Event, game_controller_input *KeyboardControlle
 				{
 					case SDLK_w:
 					{
-						SDLProcessKeyboardMessage(&KeyboardController->Up, Event->key.state == SDL_PRESSED ? true : false);
+						SDLProcessKeyboardMessage(&KeyboardController->W, Event->key.state == SDL_PRESSED ? true : false);
 					} break;
 					
 					case SDLK_a:
 					{
-						SDLProcessKeyboardMessage(&KeyboardController->Left, Event->key.state == SDL_PRESSED ? true : false);
+						SDLProcessKeyboardMessage(&KeyboardController->A, Event->key.state == SDL_PRESSED ? true : false);
 					} break;
 
 					case SDLK_s:
 					{
-						SDLProcessKeyboardMessage(&KeyboardController->Down, Event->key.state == SDL_PRESSED ? true : false);
+						SDLProcessKeyboardMessage(&KeyboardController->S, Event->key.state == SDL_PRESSED ? true : false);
 					} break;
 					
 					case SDLK_d:
 					{
-						SDLProcessKeyboardMessage(&KeyboardController->Right, Event->key.state == SDL_PRESSED ? true : false);
+						SDLProcessKeyboardMessage(&KeyboardController->D, Event->key.state == SDL_PRESSED ? true : false);
 					} break;
 
 					case SDLK_ESCAPE:
@@ -207,6 +218,8 @@ int main(int argc, char **argv)
 { 
 	Platform = (platform_t *)malloc(sizeof(platform_t));
 	Platform->Log = &Log;
+	Platform->Width = 1280;
+	Platform->Height = 720;
 
 	if(SDL_Init(SDL_INIT_VIDEO) == 0)
 	{
@@ -223,50 +236,49 @@ int main(int argc, char **argv)
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
 
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-		Platform->Window = SDL_CreateWindow("Neon God",
+
+		SDL_Window 		*Window;
+		Window 		= SDL_CreateWindow("Neon God",
 										SDL_WINDOWPOS_UNDEFINED,
 										SDL_WINDOWPOS_UNDEFINED, 1280, 720,
 										SDL_WINDOW_OPENGL); // | SDL_WINDOW_FULLSCREEN);
 
-		if(Platform->Window)
+		Platform->ReadFile = &ReadFile;
+		Platform->WriteFile = &WriteFile;
+		Platform->FreeFileMemory = &FreeFileMemory;
+
+		if(Window)
 		{
-			Platform->GLContext = SDL_GL_CreateContext(Platform->Window);
+			SDL_GLContext GLContext = SDL_GL_CreateContext(Window);
 
-			if(Platform->GLContext)
+			if(GLContext)
 			{
-				InitGL();
-				EnableGLDebug();
 
-				SDL_Log("OpenGL Version:%s\n", glGetString(GL_VERSION));
+				game_code GameCode = {};
+				
+				LoadGameCode(&GameCode);
+				GameCode.GameCodeLoaded(Platform);
 
 				game_input Input[2] = {};
 				game_input *NewInput = &Input[0];
 				game_input *OldInput = &Input[1];
+
+				SDL_Event Event;
+				bool ShouldQuit = false;
+
+				r64 FrameTime = 0;
 				
-				InitRenderer();
-
-				Platform->ReadFile = &ReadFile;
-				Platform->WriteFile = &WriteFile;
-				Platform->FreeFileMemory = &FreeFileMemory;
-				Platform->Width = 1280;
-				Platform->Height = 720;
-
-				SDL_Event *Event = &Platform->Event; 
-				Platform->ShouldQuit = false;
-
 				u64 PrevCounter, CurrentCounter, CounterFrequency;
 				CounterFrequency = SDL_GetPerformanceFrequency();
 
 				PrevCounter = SDL_GetPerformanceCounter();
-				// SDL_GL_SetSwapInterval(1);
 
-				while(!Platform->ShouldQuit)
+				while(!ShouldQuit)
 				{
-					game_controller_input *OldKeyboardController = GetController(OldInput, 0);
-					game_controller_input *NewKeyboardController = GetController(NewInput, 0);
-					// *NewKeyboardController = (game_controller_input){};
+					game_input *OldKeyboardController = OldInput;
+					game_input *NewKeyboardController = NewInput;
+
 					*NewKeyboardController = {};
-					NewKeyboardController->IsConnected = true;
 					
 					for(int ButtonIndex = 0; ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
 							++ButtonIndex)
@@ -275,32 +287,33 @@ int main(int argc, char **argv)
 							OldKeyboardController->Buttons[ButtonIndex].EndedDown;
 					}
 
-					while(SDL_PollEvent(Event))
+					while(SDL_PollEvent(&Event))
 					{
-						if(Event->type == SDL_QUIT)
+						if(Event.type == SDL_QUIT)
 						{
-							Platform->ShouldQuit = true;
+							ShouldQuit = true;
 						}
 						else
 						{
-							SDLProcessEvents(Event, NewKeyboardController);
+							SDLProcessEvents(&Event, NewKeyboardController);
 						}
 					}
 					
 					PrevCounter = SDL_GetPerformanceCounter();
-					GameUpdateAndRender(NewInput);
-					// glFinish();
-					SDL_GL_SwapWindow(Platform->Window);
+					GameCode.GameUpdateAndRender(NewInput, FrameTime);
+					SDL_GL_SwapWindow(Window);
 					
 					game_input *temp = NewInput;
 					NewInput = OldInput;
 					OldInput = temp;	
 
 					CurrentCounter = SDL_GetPerformanceCounter();
+					FrameTime = (r64)((CurrentCounter - PrevCounter)*1000.0) / CounterFrequency;
 					char DebugCountString[100];
-					sprintf(DebugCountString, "%f ms\n", (r64)((CurrentCounter - PrevCounter)*1000.0) / CounterFrequency);
+					sprintf(DebugCountString, "%f ms\n", FrameTime);
 					PrevCounter = CurrentCounter;
 					OutputDebugString(DebugCountString);
+					// Platform->Log(INFO, DebugCountString);
 				}
 			}
 			else
@@ -321,5 +334,3 @@ int main(int argc, char **argv)
 	SDL_Quit();
 	return 0;
 }
-
-/*=====  End of NEON SDL Platform Layer  ======*/

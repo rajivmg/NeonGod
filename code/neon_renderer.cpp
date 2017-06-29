@@ -15,50 +15,46 @@ shader::~shader()
 
 }
 
-void shader::CreateProgramFromFiles(read_file_result *VsFile, read_file_result *FsFile)
+void shader::CreateProgram(read_file_result *VsFile, read_file_result *FsFile)
 {
+	Vs = glCreateShader(GL_VERTEX_SHADER);
+	Fs = glCreateShader(GL_FRAGMENT_SHADER);
 
-}
+	glShaderSource(Vs, 1, (GLchar * const *)(&VsFile->Content), (const GLint *)(&VsFile->ContentSize));
+	glShaderSource(Fs, 1, (GLchar * const *)(&FsFile->Content), (const GLint *)(&FsFile->ContentSize));
 
+	glCompileShader(Vs);
+	glCompileShader(Fs);
 
-void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile)
-{
-	Shader->Vs = glCreateShader(GL_VERTEX_SHADER);
-	Shader->Fs = glCreateShader(GL_FRAGMENT_SHADER);
+	Program = glCreateProgram();
+	glAttachShader(Program, Vs);
+	glAttachShader(Program, Fs);
 
-	glShaderSource(Shader->Vs, 1, (GLchar * const *)(&VsFile->Content), (const GLint *)(&VsFile->ContentSize));
-	glShaderSource(Shader->Fs, 1, (GLchar * const *)(&FsFile->Content), (const GLint *)(&FsFile->ContentSize));
-
-	glCompileShader(Shader->Vs);
-	glCompileShader(Shader->Fs);
-
-	Shader->Program = glCreateProgram();
-	glAttachShader(Shader->Program, Shader->Vs);
-	glAttachShader(Shader->Program, Shader->Fs);
-
-	glLinkProgram(Shader->Program);
+	glLinkProgram(Program);
 		
-	glValidateProgram(Shader->Program);
+	glValidateProgram(Program);
 	GLint Validated;
-	glGetProgramiv(Shader->Program, GL_VALIDATE_STATUS, &Validated);
+	glGetProgramiv(Program, GL_VALIDATE_STATUS, &Validated);
 	
 	if(!Validated)
 	{
 		char VsErrors[8192];
 		char FsErrors[8192];
 		char ProgramErrors[8192];
-		glGetShaderInfoLog(Shader->Vs, sizeof(VsErrors), 0, VsErrors);
-		glGetShaderInfoLog(Shader->Fs, sizeof(FsErrors), 0, FsErrors);
-		glGetProgramInfoLog(Shader->Program, sizeof(ProgramErrors), 0, ProgramErrors);
+		glGetShaderInfoLog(Vs, sizeof(VsErrors), 0, VsErrors);
+		glGetShaderInfoLog(Fs, sizeof(FsErrors), 0, FsErrors);
+		glGetProgramInfoLog(Program, sizeof(ProgramErrors), 0, ProgramErrors);
 
 		Assert(!"Shader compilation and/or linking failed");	
 	}	
 
-	glDetachShader(Shader->Program, Shader->Vs);
-	glDetachShader(Shader->Program, Shader->Fs);
+	ProgramAvailable = true;
 
-	glDeleteShader(Shader->Vs);
-	glDeleteShader(Shader->Fs);
+	glDetachShader(Program, Vs);
+	glDetachShader(Program, Fs);
+
+	glDeleteShader(Vs);
+	glDeleteShader(Fs);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -66,9 +62,9 @@ void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *Fs
 ////
 ////	Quad related functions
 ////
-quad Quad(vec2 Origin, vec2 Size, vec4 UVCoords)
+texture_quad TextureQuad(vec2 Origin, vec2 Size, vec4 Color , vec4 UVCoords)
 {
-	quad QuadVertex;
+	texture_quad QuadVertex;
 /*
 	D--------C
 	|  U 	/|
@@ -84,25 +80,23 @@ quad Quad(vec2 Origin, vec2 Size, vec4 UVCoords)
 	A.XYZ = Origin.XYZ
 	A.UV  = UVCoords.XY
 
-	B.X   = Origin.X + Size.X
+	B.X   = Origin.X + Size.X - 1
 	B.Y   = Origin.Y
 	B.Z   = 0
 	B.U   = UVCoords.Z 
 	B.V   = UVCoords.Y 
 
-	C.X   = Origin.X + Size.X
-	C.Y   = Origin.Y + Size.Y
+	C.X   = Origin.X + Size.X - 1
+	C.Y   = Origin.Y + Size.Y -1
 	C.Z   = 0
 	C.UV  = UVCoords.ZW
 
 	D.X   = Origin.X 
-	D.Y   = Origin.Y + Size.Y
+	D.Y   = Origin.Y + Size.Y - 1
 	D.Z   = 0
 	D.U   = UVCoords.X
 	D.V   = UVCoords.W
  */
-
-	vec4 Color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// Upper triangle
 	// D
@@ -264,15 +258,15 @@ quad_batch::quad_batch()
 	Initialised = false;
 	GPUBufferAvailable = false;
 	ShaderAvailable = false;
-	TextureAvailable = false;
+	TextureSet = false;
+	FlushAfterDraw = true;
 }
 
 quad_batch::~quad_batch()
 {
-
 }
 
-void quad_batch::Initialise(batch_type aQuadType, u32 BufferSize)
+void quad_batch::Init(quad_type aQuadType, u32 BufferSize, bool AutoFlush)
 {
 	QuadType 			= aQuadType;
 	Buffer.MemSize 	   	= BufferSize;
@@ -287,22 +281,22 @@ void quad_batch::Initialise(batch_type aQuadType, u32 BufferSize)
 	}
 
 	Initialised = true;
+	FlushAfterDraw = AutoFlush;
 }
 
 void quad_batch::SetTexture(texture *Texture)
 {
-	Assert(QuadType == QUAD);
-	if(Texture->Convention == TOP_LEFT_ZERO)
-	{
-		Texture->FlipVertically();
-	}
+	Assert(QuadType == TEXTURE_QUAD);
+
+	// glTexImage2D expect the texture data in the bottom-up row fashion.
+	Texture->FlipVertically(); 
 
 	TextureUnit = TextureManager(GET_TEXTURE_UNIT);
 	glActiveTexture(GL_TEXTURE0 + TextureUnit);
 
 	glGenTextures(1, &TEX);
 	glBindTexture(GL_TEXTURE_2D, TEX);
-
+	
 	glTexImage2D(GL_TEXTURE_2D,
 				 0,
 				 GL_RGBA,
@@ -318,29 +312,31 @@ void quad_batch::SetTexture(texture *Texture)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	TextureSet = true;
 }
 
 void quad_batch::SetShader(shader *aShader)
 {
-	Shader = *aShader;
+	Shader = aShader;
 	ShaderAvailable = true;
 }
 
-void quad_batch::PushQuad(quad *Quad)
+void quad_batch::PushQuad(texture_quad *Quad)
 {
-	Assert(QuadType == QUAD);
+	Assert(QuadType == TEXTURE_QUAD);
 
 	if(Buffer.Content == 0)
 	{
-		this->Initialise(QUAD, KILOBYTE(64));
+		this->Init(TEXTURE_QUAD, KILOBYTE(64));
 	}
 
-	if(Buffer.MemAvailable >= sizeof(quad))
+	if(Buffer.MemAvailable >= sizeof(texture_quad))
 	{
-		memcpy(Buffer.Content, Quad->Content, sizeof(quad));
-		Buffer.Content = (quad *)Buffer.Content + 1; // Move the pointer forward to point to unused memory
-		Buffer.MemAvailable -= sizeof(quad);
-		Buffer.MemUsed += sizeof(quad);
+		memcpy(Buffer.Content, Quad->Content, sizeof(texture_quad));
+		Buffer.Content = (texture_quad *)Buffer.Content + 1; // Move the pointer forward to point to unused memory
+		Buffer.MemAvailable -= sizeof(texture_quad);
+		Buffer.MemUsed += sizeof(texture_quad);
 		++QuadCount;
 	}
 	else
@@ -355,7 +351,7 @@ void quad_batch::PushQuad(color_quad *Quad)
 
 	if(Buffer.Content == 0)
 	{
-		this->Initialise(COLOR_QUAD, KILOBYTE(64));
+		this->Init(COLOR_QUAD, KILOBYTE(64));
 	}
 
 	if(Buffer.MemAvailable >= sizeof(color_quad))
@@ -377,7 +373,7 @@ void quad_batch::CreateGPUBuffer()
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	
-	glBufferData(GL_ARRAY_BUFFER, Buffer.MemUsed, Buffer.Head, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, Buffer.MemSize, Buffer.Head, GL_DYNAMIC_DRAW);
 	
 	glGenVertexArrays(1, &VAO);
 	
@@ -385,14 +381,14 @@ void quad_batch::CreateGPUBuffer()
 	
 	Assert(ShaderAvailable);
 	
-	GLint posLoc = glGetAttribLocation(Shader.Program, "in_position");
+	GLint posLoc = glGetAttribLocation(Shader->Program, "in_position");
 	Assert(posLoc != -1);
-	GLint colorLoc = glGetAttribLocation(Shader.Program, "in_color");
+	GLint colorLoc = glGetAttribLocation(Shader->Program, "in_color");
 	Assert(colorLoc != -1);
 
-	if(QuadType == QUAD)
+	if(QuadType == TEXTURE_QUAD)
 	{
-		GLint texcoordLoc = glGetAttribLocation(Shader.Program, "in_texcoord");
+		GLint texcoordLoc = glGetAttribLocation(Shader->Program, "in_texcoord");
 		Assert(texcoordLoc != -1);
 
 		glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
@@ -404,10 +400,10 @@ void quad_batch::CreateGPUBuffer()
 		glVertexAttribPointer((GLuint)texcoordLoc, 2, GL_FLOAT, GL_FALSE, 36, (GLvoid *)28);
 		glEnableVertexAttribArray((GLuint)texcoordLoc);
 	
-		GLint posSampler = glGetUniformLocation(Shader.Program, "diffuse_sampler");
+		GLint posSampler = glGetUniformLocation(Shader->Program, "map0");
 		Assert(posSampler != -1);
 
-		glUseProgram(Shader.Program);
+		glUseProgram(Shader->Program);
 		glUniform1i(posSampler, TextureUnit);
 	}
 	else if(QuadType == COLOR_QUAD)
@@ -418,6 +414,7 @@ void quad_batch::CreateGPUBuffer()
 		glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 28, (GLvoid *)12);
 		glEnableVertexAttribArray((GLuint)colorLoc);
 	}
+	GPUBufferAvailable = true;
 }
 
 void quad_batch::UpdateGPUBuffer()
@@ -436,10 +433,14 @@ void quad_batch::Flush()
 
 void quad_batch::Draw()
 {
+	if(QuadType != COLOR_QUAD)
+	{
+		Assert(TextureSet == true);
+	}
+
 	if(!GPUBufferAvailable)
 	{
 		this->CreateGPUBuffer();
-		GPUBufferAvailable = true; // shift
 	}
 	else
 	{
@@ -447,228 +448,225 @@ void quad_batch::Draw()
 	}
 	
 	glBindVertexArray(VAO);
+	glUseProgram(Shader->Program);
 	
-	glUseProgram(Shader.Program);
+	mat4 Proj = OrthoMat4(0.0f, (r32)Platform->Width, (r32)Platform->Height, 0.0f, -1.0f, 1.0f);
 
-	r32 A = 2.0f/(r32)Platform->Width, B = 2.0f/(r32)Platform->Height;
-	
-	mat4 Proj; //a = &Proj;
-	Proj._00 = A; Proj._01 = 0; Proj._02 = 0; Proj._03 = -1;
-	Proj._10 = 0; Proj._11 = B; Proj._12 = 0; Proj._13 = -1;
-	Proj._20 = 0; Proj._21 = 0; Proj._22 = 1; Proj._23 =  0;
-	Proj._30 = 0; Proj._31 = 0; Proj._32 = 0; Proj._33 =  1;
-
-	GLint projLoc = glGetUniformLocation(Shader.Program, "proj");
+	GLint projLoc = glGetUniformLocation(Shader->Program, "proj");
 	Assert(projLoc != -1);
 	glUniformMatrix4fv((GLuint)projLoc, 1, GL_TRUE, Proj.Elements);
 	
-	GLsizei ContentSize = (QuadType == QUAD) ? sizeof(quad) : sizeof(color_quad);
+	GLsizei ContentSize = (QuadType == TEXTURE_QUAD) ? sizeof(texture_quad) : sizeof(color_quad);
 	glDrawArrays(GL_TRIANGLES, 0, Buffer.MemUsed / ContentSize * 6);
 
-	this->Flush();
+	if(FlushAfterDraw == true)
+	{
+		this->Flush();
+	}
 }
 
-// void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize)
-// {
-// 	QuadBatch->Type = Type;
-// 	QuadBatch->QuadCount = 0;
-// 	QuadBatch->GPUBufferAvailable = false;
-// 	QuadBatch->ShaderAvailable = false;
-// 	QuadBatch->TextureAvailable = false;
-// 	QuadBatch->TexUnit = 0;
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+////
+//// 	Line batch
+////
+line_batch::line_batch()
+{
+	LineCount = 0;
+	Initialised = false;
+	GPUBufferAvailable = false;
+	ShaderAvailable = false;
+	FlushAfterDraw = true;
+}
 
-// 	QuadBatch->Buffer.MemSize 	   = BufferSize;
-// 	QuadBatch->Buffer.MemAvailable = BufferSize; // In bytes
-// 	QuadBatch->Buffer.MemUsed 	   = 0;
-// 	QuadBatch->Buffer.Content 	   = malloc(BufferSize);
-// 	QuadBatch->Buffer.Head 		   = QuadBatch->Buffer.Content;
-// 	if(QuadBatch->Buffer.Content == 0)
-// 	{
-// 		Assert(!"AllocError");
-// 		// @TODO: exit(0); and show message
-// 	}
-// }
+line_batch::~line_batch()
+{
+}
 
-// void SetBatchTexture(quad_batch *QuadBatch, texture *Texture)
-// {
-// 	Assert(QuadBatch->Type == QUAD);
-// 	if(Texture->Convention == TOP_LEFT_ZERO)
-// 	{
-// 		Texture->FlipVertically();
-// 	}
+void line_batch::Init(u32 BufferSize, bool AutoFlush)
+{
+	Buffer.MemSize 	   	= BufferSize;
+	Buffer.MemAvailable	= BufferSize; // In bytes
+	Buffer.MemUsed 	   	= 0;
+	Buffer.Content 	   	= malloc(BufferSize);
+	Buffer.Head			= Buffer.Content;
 
-// 	QuadBatch->Tex = TextureManager(GET_TEXTURE_UNIT);
-// 	glActiveTexture(GL_TEXTURE0 + QuadBatch->TexUnit);
+	if(Buffer.Content == 0)
+	{
+		Assert(!"Memory allocation error");
+	}
 
-// 	glGenTextures(1, &QuadBatch->Tex);
-// 	glBindTexture(GL_TEXTURE_2D, QuadBatch->Tex);
+	Initialised = true;
+	FlushAfterDraw = AutoFlush;
+}
 
-// 	glTexImage2D(GL_TEXTURE_2D,
-// 				 0,
-// 				 GL_RGBA,
-// 				 Texture->Width,
-// 				 Texture->Height,
-// 				 0,
-// 				 GL_RGBA,
-// 				 GL_UNSIGNED_BYTE,
-// 				 Texture->Content);
+void line_batch::SetShader(shader *aShader)
+{
+	Shader = aShader;
+	ShaderAvailable = true;
+}
 
-// 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-// 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-// 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-// }
+void line_batch::PushLine(vec3 Start, vec3 End, vec4 Color)
+{
+	if(Buffer.Content == 0)
+	{
+		this->Init(KILOBYTE(64));
+	}
 
-// void SetBatchShader(quad_batch *QuadBatch, shader *_Shader)
-// {
-// 	QuadBatch->Shader = *_Shader;
-// 	QuadBatch->ShaderAvailable = true;
-// }
+	if(Buffer.MemAvailable >= sizeof(line_3d))
+	{
+		// create line
+		line_3d Line;
+		Line.Content[0] = Start.X + 0.5f; //@NOTE: Half pixel correction
+		Line.Content[1] = Start.Y + 0.5f;
+		Line.Content[2] = Start.Z;
 
-// void CreateGPUBuffer(quad_batch *QuadBatch)
-// {
-// 	glGenBuffers(1, &QuadBatch->VBO);
-// 	glBindBuffer(GL_ARRAY_BUFFER, QuadBatch->VBO);
+		Line.Content[3] = Color.R;
+		Line.Content[4] = Color.G;
+		Line.Content[5] = Color.B;
+		Line.Content[6] = Color.A;
+
+		Line.Content[7] = End.X + 0.5f;
+		Line.Content[8] = End.Y + 0.5f;
+		Line.Content[9] = End.Z;
+
+		Line.Content[10] = Color.R;
+		Line.Content[11] = Color.G;
+		Line.Content[12] = Color.B;
+		Line.Content[13] = Color.A;
+
+		memcpy(Buffer.Content, Line.Content, sizeof(line_3d));
+		Buffer.Content = (line_3d *)Buffer.Content + 1; // Move the pointer forward to point to unused memory
+		Buffer.MemAvailable -= sizeof(line_3d);
+		Buffer.MemUsed += sizeof(line_3d);
+		++LineCount;
+	}
+	else
+	{
+		Assert(!"Line buffer memory full.");
+	}
+}
+
+void line_batch::PushLine(vec3 Start, r32 Radian, u32 Length, vec4 Color)
+{
+	if(Buffer.Content == 0)
+	{
+		this->Init(KILOBYTE(64));
+	}
+
+	if(Buffer.MemAvailable >= sizeof(line_3d))
+	{
+		// create line
+		line_3d Line;
+		Line.Content[0] = Start.X + 0.5f; //@NOTE: Half pixel correction
+		Line.Content[1] = Start.Y + 0.5f;
+		Line.Content[2] = Start.Z;
+
+		Line.Content[3] = Color.R;
+		Line.Content[4] = Color.G;
+		Line.Content[5] = Color.B;
+		Line.Content[6] = Color.A;
+
+		Line.Content[7] = (GLfloat) ( Start.X + Length * cos(Radian) ); //End.X + 0.5f;
+		Line.Content[8] = (GLfloat) ( Start.Y + Length * sin(Radian) ); //End.Y + 0.5f;
+		Line.Content[9] = Start.Z;
+
+		Line.Content[10] = Color.R;
+		Line.Content[11] = Color.G;
+		Line.Content[12] = Color.B;
+		Line.Content[13] = Color.A;
+
+		// vec3 Start, End;
+		// Start.X = 0.0f;
+		// Start.Y = Platform->Height;
+		// Start.Z = 0.0f;
 	
-// 	glBufferData(GL_ARRAY_BUFFER, QuadBatch->Buffer.MemUsed, QuadBatch->Buffer.Head, GL_DYNAMIC_DRAW);
+		// End.X = Start.X + 500 * cos((3.14/180) * 315);
+		// End.Y = Start.Y + 500 * sin((3.14/180) * 315);
+		// End.Z = 0.0f;
+
+		memcpy(Buffer.Content, Line.Content, sizeof(line_3d));
+		Buffer.Content = (line_3d *)Buffer.Content + 1; // Move the pointer forward to point to unused memory
+		Buffer.MemAvailable -= sizeof(line_3d);
+		Buffer.MemUsed += sizeof(line_3d);
+		++LineCount;
+	}
+	else
+	{
+		Assert(!"Line buffer memory full.");
+	}
+}
+
+void line_batch::CreateGPUBuffer()
+{
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	
-// 	glGenVertexArrays(1, &QuadBatch->VAO);
+	glBufferData(GL_ARRAY_BUFFER, Buffer.MemSize, Buffer.Head, GL_DYNAMIC_DRAW);
 	
-// 	glBindVertexArray(QuadBatch->VAO);
+	glGenVertexArrays(1, &VAO);
 	
-// 	Assert(QuadBatch->ShaderAvailable);
+	glBindVertexArray(VAO);
 	
-// 	GLint posLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_position");
-// 	Assert(posLoc != -1);
-// 	GLint colorLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_color");
-// 	Assert(colorLoc != -1);
-// 	if(QuadBatch->Type == QUAD)
-// 	{
-// 		GLint texcoordLoc = glGetAttribLocation(QuadBatch->Shader.Program, "in_texcoord");
-// 		Assert(texcoordLoc != -1);
-
-// 		glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 36, (GLvoid *)0);
-// 		glEnableVertexAttribArray((GLuint)posLoc);
-		
-// 		glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 36, (GLvoid *)12);
-// 		glEnableVertexAttribArray((GLuint)colorLoc);
-		
-// 		glVertexAttribPointer((GLuint)texcoordLoc, 2, GL_FLOAT, GL_FALSE, 36, (GLvoid *)28);
-// 		glEnableVertexAttribArray((GLuint)texcoordLoc);
+	Assert(ShaderAvailable);
 	
-// 		GLint posSampler = glGetUniformLocation(QuadBatch->Shader.Program, "diffuse_sampler");
-// 		Assert(posSampler != -1);
-// 		glUseProgram(QuadBatch->Shader.Program);
-// 		glUniform1i(posSampler, QuadBatch->TexUnit);
-// 	}
-// 	else if(QuadBatch->Type == COLOR_QUAD)
-// 	{
-// 		glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 28, (GLvoid *)0);
-// 		glEnableVertexAttribArray((GLuint)posLoc);
-		
-// 		glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 28, (GLvoid *)12);
-// 		glEnableVertexAttribArray((GLuint)colorLoc);
-// 	}
-// }
+	GLint posLoc = glGetAttribLocation(Shader->Program, "in_position");
+	Assert(posLoc != -1);
+	GLint colorLoc = glGetAttribLocation(Shader->Program, "in_color");
+	Assert(colorLoc != -1);
 
-// void UpdateGPUBuffer(quad_batch *QuadBatch)
-// {
-// 	glBindBuffer(GL_ARRAY_BUFFER, QuadBatch->VBO);
-// 	glBufferSubData(GL_ARRAY_BUFFER, 0, QuadBatch->Buffer.MemUsed, QuadBatch->Buffer.Head);
-// }
-
-// void FlushBatch(quad_batch *QuadBatch)
-// {
-// 	QuadBatch->QuadCount = 0;
-// 	QuadBatch->Buffer.Content = QuadBatch->Buffer.Head;
-// 	QuadBatch->Buffer.MemUsed = 0;
-// 	QuadBatch->Buffer.MemAvailable = QuadBatch->Buffer.MemSize;
-// }
-
-// void PushQuad(quad_batch *QuadBatch, quad *Quad)
-// {
-// 	Assert(QuadBatch->Type == QUAD);
-// 	if(QuadBatch->Buffer.Content == 0)
-// 	{
-// 		InitQuadBatch(QuadBatch, QUAD, MEGABYTE(1));
-// 	}
-
-// 	if(QuadBatch->Buffer.MemAvailable >= sizeof(quad))
-// 	{
-// 		memcpy(QuadBatch->Buffer.Content, Quad->Content, sizeof(quad));
-// 		QuadBatch->Buffer.Content = (quad *)QuadBatch->Buffer.Content + 1; // Move the pointer forward to point to unused memory
-// 		QuadBatch->Buffer.MemAvailable -= sizeof(quad);
-// 		QuadBatch->Buffer.MemUsed += sizeof(quad);
-// 		++(QuadBatch->QuadCount);
-// 	}
-// 	else
-// 	{
-// 		Assert(!"No memory available");
-// 		// exit(0) and show message(Insufficient buffer memory size)
-// 	}
-// }
-
-// void PushQuad(quad_batch *QuadBatch, color_quad *Quad)
-// {
-// 	Assert(QuadBatch->Type == COLOR_QUAD);
-// 	if(QuadBatch->Buffer.Content == 0)
-// 	{
-// 		InitQuadBatch(QuadBatch, COLOR_QUAD, MEGABYTE(1));
-// 	}
-
-// 	if(QuadBatch->Buffer.MemAvailable >= sizeof(color_quad))
-// 	{
-// 		memcpy(QuadBatch->Buffer.Content, Quad->Content, sizeof(color_quad));
-// 		QuadBatch->Buffer.Content = (color_quad *)QuadBatch->Buffer.Content + 1; // Move the pointer forward to point to unused memory
-// 		QuadBatch->Buffer.MemAvailable -= sizeof(color_quad);
-// 		QuadBatch->Buffer.MemUsed += sizeof(color_quad);
-// 		++(QuadBatch->QuadCount);
-// 	}
-// 	else
-// 	{
-// 		Assert(!"No memory available");
-// 		// exit(0) and show message(Insufficient buffer memory size)
-// 	}
-// }
-
-// void DrawQuadBatch(quad_batch *QuadBatch)
-// {
-// 	if(!QuadBatch->GPUBufferAvailable)
-// 	{
-// 		CreateGPUBuffer(QuadBatch);
-// 		QuadBatch->GPUBufferAvailable = true;
-// 	}
-// 	else
-// 	{
-// 		UpdateGPUBuffer(QuadBatch);
-// 	}
+	glVertexAttribPointer((GLuint)posLoc, 3, GL_FLOAT, GL_FALSE, 28, (GLvoid *)0);
+	glEnableVertexAttribArray((GLuint)posLoc);
 	
-// 	glBindVertexArray(QuadBatch->VAO);
-	
-// 	// if(QuadBatch->Type == QUAD)
-// 	// {
-// 	// 	glActiveTexture(GL_TEXTURE0 + QuadBatch->TexUnit);
-// 	// }
-	
-// 	glUseProgram(QuadBatch->Shader.Program);
+	glVertexAttribPointer((GLuint)colorLoc, 4, GL_FLOAT, GL_FALSE, 28, (GLvoid *)12);
+	glEnableVertexAttribArray((GLuint)colorLoc);
 
-// 	r32 A = 2.0f/(r32)Platform->Width, B = 2.0f/(r32)Platform->Height;
-	
-// 	mat4 *Proj = &QuadBatch->Proj;
-// 	Proj->_00 = A; Proj->_01 = 0; Proj->_02 = 0; Proj->_03 = -1;
-// 	Proj->_10 = 0; Proj->_11 = B; Proj->_12 = 0; Proj->_13 = -1;
-// 	Proj->_20 = 0; Proj->_21 = 0; Proj->_22 = 1; Proj->_23 =  0;
-// 	Proj->_30 = 0; Proj->_31 = 0; Proj->_32 = 0; Proj->_33 =  1;
+	GPUBufferAvailable = true;
+}
 
-// 	GLint projLoc = glGetUniformLocation(QuadBatch->Shader.Program, "proj");
-// 	Assert(projLoc != -1);
-// 	glUniformMatrix4fv((GLuint)projLoc, 1, GL_TRUE, Proj->Elements);
-	
-// 	GLsizei ContentSize = QuadBatch->Type == QUAD ? sizeof(quad) : sizeof(COLOR_QUAD);
-// 	glDrawArrays(GL_TRIANGLES, 0, QuadBatch->Buffer.MemUsed / ContentSize * 6);
+void line_batch::UpdateGPUBuffer()
+{
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, Buffer.MemUsed, Buffer.Head);
+}
 
-// 	FlushBatch(QuadBatch);
-// }
+void line_batch::Flush()
+{
+	LineCount 		= 0;
+	Buffer.Content 	= Buffer.Head;
+	Buffer.MemUsed 	= 0;
+	Buffer.MemAvailable = Buffer.MemSize;
+}
+
+void line_batch::Draw()
+{
+	if(!GPUBufferAvailable)
+	{
+		this->CreateGPUBuffer();
+	}
+	else
+	{
+		this->UpdateGPUBuffer();
+	}
+	
+	glBindVertexArray(VAO);
+	glUseProgram(Shader->Program);
+	
+	mat4 Proj = OrthoMat4(0.0f, (r32)Platform->Width, (r32)Platform->Height, 0.0f, -1.0f, 1.0f);
+
+	GLint projLoc = glGetUniformLocation(Shader->Program, "proj");
+	Assert(projLoc != -1);
+	glUniformMatrix4fv((GLuint)projLoc, 1, GL_TRUE, Proj.Elements);
+	
+	GLsizei ContentSize = sizeof(line_3d);
+	glDrawArrays(GL_LINES, 0, Buffer.MemUsed / ContentSize * 2); // change to LineCount * 2
+
+	if(FlushAfterDraw == true)
+	{
+		this->Flush();
+	}
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
@@ -696,7 +694,7 @@ u16 TextureManager(tex_command Command, u16 TexUnit)
 	else if(Command == RELEASE_TEXTURE_UNIT)
 	{
 		Assert(TexUnit != -1);
-		Assert(Unit[TexUnit] != 0); // Assert is the TexUnit is already free.
+		Assert(Unit[TexUnit] != 0); // Assert if the TextureUnit is already free.
 		Unit[TexUnit] = 0;
 	}
 	return (u16)-1;
@@ -707,7 +705,6 @@ u16 TextureManager(tex_command Command, u16 TexUnit)
 ////
 ////	Text rendering functions
 ////
-
 font::font()
 {
 	Initialised = false;
@@ -715,7 +712,6 @@ font::font()
 
 font::~font()
 {
-
 }
 
 void font::Load(char const * FontSrc, u16 aFontHeight)
@@ -762,19 +758,21 @@ void font::Load(char const * FontSrc, u16 aFontHeight)
 		}
 
 		glyph *Glyph = Glyphs + (CIndex - 32);
-		Glyph->BitmapWidth = Face->glyph->bitmap.width;
-		Glyph->BitmapHeight = Face->glyph->bitmap.rows;
+		Glyph->Width = Face->glyph->bitmap.width;
+		Glyph->Height = Face->glyph->bitmap.rows;
 		
 		u8 *GlyphBitmap = Face->glyph->bitmap.buffer;
 
 		FT_Glyph_Metrics *Metrics = &Face->glyph->metrics;
 
-		//Glyph->HoriBearingX =
+		Glyph->HoriBearingX = Metrics->horiBearingX/64;
+		Glyph->HoriBearingY = Metrics->horiBearingY/64;
+		Glyph->HoriAdvance  = Metrics->horiAdvance/64;
+		Glyph->Hang 		= Glyph->HoriBearingY - Glyph->Height;
 		
-		GlyphTexture->Width = Glyph->BitmapWidth;
-		GlyphTexture->Height = Glyph->BitmapHeight;
+		GlyphTexture->Width = Glyph->Width;
+		GlyphTexture->Height = Glyph->Height;
 		GlyphTexture->ContentSize = GlyphTexture->Width * GlyphTexture->Height * 4;
-		GlyphTexture->Convention = TOP_LEFT_ZERO;
 		if(GlyphTexture->ContentSize != 0)
 		{
 			GlyphTexture->Content = malloc(GlyphTexture->ContentSize);
@@ -785,7 +783,7 @@ void font::Load(char const * FontSrc, u16 aFontHeight)
 		u32 *DestTexel = (u32 *)GlyphTexture->Content;
 		u8 *SrcTexel = (u8 *)GlyphBitmap;
 
-		// Convert Glpyh's 8bit texture to 32bit texture
+		// convert Glpyh's 8bit texture to 32bit texture.
 		for(int x = 0; x < GlyphTexture->Width * GlyphTexture->Height; ++x)
 		{
 			u8 *DestGreen = (u8 *)DestTexel+3;
@@ -797,23 +795,35 @@ void font::Load(char const * FontSrc, u16 aFontHeight)
 
 		if(GlyphTexture->ContentSize != 0)
 		{
-			char Temp[20];
-			snprintf(Temp, 20, "%d.tga", CIndex);
+			// char Temp[20];
+			// snprintf(Temp, 20, "%d.tga", CIndex);
 			// DebugTextureSave(Temp, GlyphTexture);
 
 			Glyph->Coordinates = Atlas.PackTexture(GlyphTexture);
 		}
 
-		// After texture is copied to texture atlas
+		// After glyph texture has been copied to texture atlas free
+		// glyph texture memory.
 		if(GlyphTexture->ContentSize != 0)
 		{
 			free(GlyphTexture->Content);
 		}
 	}
 
+	// debugging purpose
+	// texture AtlasDebugCopy;
+	// AtlasDebugCopy = Atlas.ToTexture();
+	// DebugTextureSave("FontAtlas.tga", &AtlasDebugCopy);
+	
 	Initialised = true;
 }
 
+void font::FreeMemory()
+{
+	Assert(Initialised);
+	SAFE_FREE(Glyphs);
+	Atlas.FreeMemory();
+}
 
 text_batch::text_batch()
 {
@@ -822,65 +832,129 @@ text_batch::text_batch()
 
 text_batch::~text_batch()
 {
-
 }
 
-void text_batch::SetFont(font *aFont)
+void text_batch::SetFont(font *aFont, u32 BufferSize)
 {
 	Assert(aFont->Initialised);
 	Font = aFont;
 	FontSet = true;
 
-	// initialise Batch
+	// initialise the quad_batch.
+	Batch.Init(TEXTURE_QUAD, BufferSize, false);
+
+	Batch.SetShader(RenderResources.TextShader);
+
 	texture FontTexture = Font->Atlas.ToTexture();
+
+	// since we are calculating the texture coordinates by considering (0,0)
+	// as the top left of the texture, but opengl expect the texture
+	// coordinates (0, 0) as bottom left of the texture. we need to flip the
+	// texture once.
+	FontTexture.FlipVertically();
+
+	Batch.SetTexture(&FontTexture);
 }
 
-void text_batch::PushText(char const *Text, int X, int Y)
+void text_batch::PushText(vec2 Origin, vec4 Color, char const *Fmt, ...)
 {
+	char Text[8192];
+
+	va_list Arguments;
+	va_start(Arguments, Fmt);
+
+	vsnprintf(Text, 8192, Fmt, Arguments);
+
+	va_end(Arguments);
+
 	Assert(FontSet);
-	
+
+	Pen = Origin;
+
+	int Index = 0;
+	while(Text[Index] != 0)
+	{
+		if((int)Text[Index] == 10)
+		{
+			Pen.X = Origin.X;
+			Pen.Y -= Font->FontHeight;
+			Index++;
+			continue;
+		}
+
+		glyph *CharGlyph = Font->Glyphs + ((int)Text[Index] - 32);
+		vec4 TexCoords = vec4(CharGlyph->Coordinates.BL_X, CharGlyph->Coordinates.BL_Y, CharGlyph->Coordinates.TR_X, CharGlyph->Coordinates.TR_Y);
+		
+		vec2 CharOrigin = vec2(Pen.X + CharGlyph->HoriBearingX, Pen.Y + CharGlyph->Hang);
+
+		texture_quad CharQuad = TextureQuad(CharOrigin, vec2(CharGlyph->Width, CharGlyph->Height), Color, TexCoords);
+		Batch.PushQuad(&CharQuad);
+
+		Pen.X += CharGlyph->HoriAdvance; 
+
+		Index++;
+	}
 }
 
 void text_batch::Draw()
 {
-
+	Batch.Draw();
 }
 
-// void DrawGUIText(text_batch *TextBatch, char const * Text, int X, int Y)
-// {
-// 	quad_batch Batch;
-// 	InitQuadBatch(&Batch, QUAD, KILOBYTE(32));
-// 	// SetBatchTexture()
-// 	glyph *Glyph = TextBatch->Glyphs + (int)Text[0];
-// 	quad *CharQuad = MakeQuad(vec2(X, Y), vec2(Glyph->BitmapWidth, Glyph->BitmapHeight),
-// 								vec4(1.0f, 1.0f, 0.0f, 1.0f),
-// 								vec4(Glyph->Coordinates.BL_X, Glyph->Coordinates.BL_Y,
-// 									Glyph->Coordinates.TR_X, Glyph->Coordinates.TR_Y));
-
-// 	PushQuad(&Batch, &CharQuad);
-// 	DrawQuadBatch(&Batch);
-// }
+void text_batch::Flush()
+{
+	Batch.Flush();
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 ////
 ////	Renderer functions
 ////
+void InitRenderResources()
+{
+	read_file_result Vs = Platform->ReadFile("text.vs");
+	read_file_result Fs = Platform->ReadFile("text.fs");
+
+	RenderResources.TextShader = (shader *)malloc(sizeof(shader));
+	RenderResources.TextShader->CreateProgram(&Vs, &Fs);
+
+	Platform->FreeFileMemory(&Vs);
+	Platform->FreeFileMemory(&Fs);
+
+	RenderResources.HUDFont = (font *)malloc(sizeof(font));
+	RenderResources.HUDFont->Load("Inconsolata-Regular.ttf", 28);
+}
+
 void InitRenderer()
 {
-	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+	// initialise opengl function pointers.
+	InitGL();
 
-	//glEnable(GL_DEPTH_TEST);
-	
+	// initialise render resources
+	InitRenderResources();
+
+	// clear the color to blue.
+	glClearColor(0.13f, 0.18f, 0.48f, 1.0f);
+
+	// set the viewport
+	glViewport(0, 0, Platform->Width, Platform->Height);
+
+	// since we are following the left-handed coodinate system we set
+	// clock-wise vertex winding as the triangle's front.
 	glFrontFace(GL_CW);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK); //@TODO: Handle transparent triangles
 
+	// enable back-face culling to improve performance.
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+	// enable the blending to support alpha textures. 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void BackBufferFlush()
+void ClearBackBuffer()
 {
+	// clear the back-buffer's color and depth bits.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }

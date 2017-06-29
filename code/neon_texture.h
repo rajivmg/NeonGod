@@ -1,18 +1,15 @@
 #ifndef neon_texture_H
 #define neon_texture_H
 #include "neon_platform.h"
-
+#include <cstdlib> // malloc, free
+#include <cstring> // memset
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 ////
 ////	Texture utility functions
 ////
-enum coordinate_convention
-{
-	TOP_LEFT_ZERO,
-	BOTTOM_LEFT_ZERO
-};
 
+// TGA file header format.
 #pragma pack(push, 1)
 typedef struct tga_header
 {
@@ -44,7 +41,6 @@ public:
 	s32 	Height;
 	void*	Content;
 	u32  	ContentSize;
-  	coordinate_convention Convention;
   	bool 	Initialised;
 	
 	void LoadFromFile(char const *Filename);
@@ -96,7 +92,6 @@ public:
 	bool  	Initialised;
 
 	binary_t_node Node;
-	coordinate_convention Convention;
 
 	void Initialise(u32 AtlasWidth, u32 AtlasHeigth, u16 AtlasPadding);
 	texture_coordinates PackTexture(texture *Texture);
@@ -114,7 +109,7 @@ public:
 ////
 #ifdef DEBUG_BUILD
   #define DebugTextureSave(F, T) DebugTextureSave_(F, T)
-#elif
+#else
   #define DebugTextureSave(F, T)
 #endif
 

@@ -1,108 +1,114 @@
 #include "neon_game.h"
-#include "neon_renderer.h"
-#include "neon_texture.h"
 
-void GameUpdateAndRender(game_input *Input)
+extern "C"
+GAME_CODE_LOADED(GameCodeLoaded)
+{
+	Platform = aPlatform;
+	InitRenderer();
+}
+
+extern "C"
+GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
 	/*===================================
 	=            Game Update            =
 	===================================*/
 	
 	// @TODO: Add support for 2nd analog controller
-	for(uint8_t ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
-	{
-		game_controller_input *Controller = GetController(Input, ControllerIndex);
 
-		if(Controller->IsConnected)
-		{
-			if(Controller->Up.EndedDown && Controller->Up.HalfTransitionCount == 1)
-			{
-				Platform->Log(INFO,"Go Up!");
-			}
-		}
+	if(Input->W.EndedDown && Input->W.HalfTransitionCount == 1)
+	{
+		Platform->Log(INFO,"Go Up!");
+			// SDL_SetWindowFullscreen(Platform->Window, SDL_WINDOW_FULLSCREEN);
 	}
+
 	
-	/*=====  End of Game Update  ======*/
+	//==================================//
 	
-	BackBufferFlush();
+	ClearBackBuffer();
 	
 	/*===================================
 	=            Game Render            =
 	===================================*/
 	local_persist shader QuadShader;
 	local_persist shader ColoredQuadShader;
-	local_persist texture GuiTexture;
+	local_persist texture EngineLogo;
 	local_persist b32 ShaderAndTextureSet = false;
-	local_persist quad_batch GuiBatch = {};
-	local_persist quad_batch ColoredQuadBatch = {};
-	local_persist quad TestQuad = {}; 
+	local_persist quad_batch TestQuadBatch = {};
+	local_persist texture_quad EngineLogoQuad = {}; 
 	local_persist color_quad CQuad1 = {};
-	local_persist color_quad CQuad2 = {};
-	local_persist color_quad CQuad3 = {};
-	local_persist text_batch TBatch;
+	local_persist text_batch DebugUITextBatch = {};
+	local_persist line_batch DebugLineBatch = {};
 
 	if(!ShaderAndTextureSet)
 	{
-		// InitQuadBatch(&GuiBatch, QUAD, MEGABYTE(1));
-		GuiBatch.Initialise(QUAD, MEGABYTE(1));
-
-		read_file_result V1Src = Platform->ReadFile("quad_vert.glsl");
-		read_file_result F1Src = Platform->ReadFile("quad_frag.glsl");
+		TestQuadBatch.Init(TEXTURE_QUAD, MEGABYTE(1));
+		read_file_result V1Src = Platform->ReadFile("texture_quad.vs");
+		read_file_result F1Src = Platform->ReadFile("texture_quad.fs");
 		
-		CreateShader(&QuadShader, &V1Src, &F1Src);
+		QuadShader.CreateProgram(&V1Src, &F1Src);
 
 		Platform->FreeFileMemory(&V1Src);
 		Platform->FreeFileMemory(&F1Src);
 
-		// SetBatchShader(&GuiBatch, &QuadShader);
-		GuiBatch.SetShader(&QuadShader);
+		TestQuadBatch.SetShader(&QuadShader);
 
-	 	GuiTexture.LoadFromFile("debug_art.tga");
-		// SetBatchTexture(&GuiBatch, &GuiTexture);
-		GuiBatch.SetTexture(&GuiTexture);
-		GuiTexture.FreeMemory();
+	 	EngineLogo.LoadFromFile("vortex.tga");
+		TestQuadBatch.SetTexture(&EngineLogo);
+		EngineLogo.FreeMemory();
 
-		ShaderAndTextureSet = true;
 
-		// InitQuadBatch(&ColoredQuadBatch, COLOR_QUAD, MEGABYTE(1));
-		ColoredQuadBatch.Initialise(COLOR_QUAD, MEGABYTE(1));
+		DebugLineBatch.Init(KILOBYTE(64));
 
-		read_file_result V2Src = Platform->ReadFile("quad_colored_vert.glsl");
-		read_file_result F2Src = Platform->ReadFile("quad_colored_frag.glsl");
-
-		CreateShader(&ColoredQuadShader, &V2Src, &F2Src);
+		read_file_result V2Src = Platform->ReadFile("color_quad.vs");
+		read_file_result F2Src = Platform->ReadFile("color_quad.fs");
+		ColoredQuadShader.CreateProgram(&V2Src, &F2Src);
 		Platform->FreeFileMemory(&V2Src);
 		Platform->FreeFileMemory(&F2Src);
-		// SetBatchShader(&ColoredQuadBatch, &ColoredQuadShader);
-		ColoredQuadBatch.SetShader(&ColoredQuadShader);
 
- 		TestQuad = Quad(vec2(0, 0), vec2((r32)Platform->Width, (r32)Platform->Height),
-						vec4(0.0f, 0.0f, 1.0f, 1.0f));
- 		CQuad1 = ColorQuad(vec2(50, 50), vec2(200, 200), vec4(1.0f, 0.0f, 1.0f, 0.8f));
- 		CQuad2 = ColorQuad(vec2(150, 50), vec2(200, 200), vec4(1.0f, 1.0f, 0.0f, 0.8f));
- 		CQuad3 = ColorQuad(vec2(10, 510), vec2(200, 200), vec4(0.0f, 0.0f, 0.0f, 0.7f));
+		DebugLineBatch.SetShader(&ColoredQuadShader);
 
-		font *ConsoleFont = new font();
- 		ConsoleFont->Load("Inconsolata-Regular.ttf", 32);
+ 		EngineLogoQuad = TextureQuad(vec2(608, 296), vec2(64, 64));
+
+ 		DebugUITextBatch.SetFont(RenderResources.HUDFont, KILOBYTE(32));
  		
- 		TBatch.SetFont(ConsoleFont);
 
 		vec2 Top = vec2(1.0f, 2.0f);
 		vec2 Bottom = vec2(2.0f, 3.0f);
+		r32 DotProduct = Top.Dot(Bottom);
 		vec2 ResultS = Top + Bottom;
 		vec4 P = vec4(-Top, -Bottom);
+
+		ShaderAndTextureSet = true;
 	}
 
-	GuiBatch.PushQuad(&TestQuad);
-	// PushQuad(&GuiBatch, &TestQuad);
-	ColoredQuadBatch.PushQuad(&CQuad1);
-	ColoredQuadBatch.PushQuad(&CQuad2);
-	ColoredQuadBatch.PushQuad(&CQuad3);
-	
-	// DrawQuadBatch(&GuiBatch);
-	GuiBatch.Draw();
-	ColoredQuadBatch.Draw();
+	TestQuadBatch.PushQuad(&EngineLogoQuad);
 
-	// DrawGUIText(&TBatch, "R", 10, 10);
-	/*=====  End of Game Render  ======*/
+	// vec3 Start, End;
+	// Start.X = 0.0f;
+	// Start.Y = Platform->Height;
+	// Start.Z = 0.0f;
+
+	// End.X = Start.X + 500 * cos((3.14/180) * 315);
+	// End.Y = Start.Y + 500 * sin((3.14/180) * 315);
+	// End.Z = 0.0f;
+	// DebugLineBatch.PushLine(Start, End, vec4(1.0f, 0.0f, 1.0f, 1.0f));
+	DebugLineBatch.PushLine(vec3(0, 0, 0), 3.14f/4, 500, vec4(1.0f, 1.0f, 0.0f, 1.0f));
+
+	DebugLineBatch.PushLine(vec3(0, 40, 0), vec3(Platform->Width, 40, 0), vec4(1.0f, 0.0f, 1.0f, 1.0f));
+	DebugLineBatch.PushLine(vec3(40, 0, 0), vec3(40, Platform->Height, 0), vec4(1.0f, 0.0f, 1.0f, 1.0f));
+
+	local_persist int Counter = 0;
+	if(Counter == 15)
+	{	
+		DebugUITextBatch.Flush();
+		DebugUITextBatch.PushText(vec2(10, Platform->Height - 40), vec4(1.0f, 1.0f, 1.0f, 1.0f),
+				"Frame time(ms): %.2f\nA quick brown fox jumps over the lazy dog.", FrameTime);
+		Counter = 0;
+	}
+	Counter++;
+
+	TestQuadBatch.Draw();
+	DebugLineBatch.Draw();
+	DebugUITextBatch.Draw();
 }

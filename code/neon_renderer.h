@@ -1,21 +1,26 @@
 #ifndef NEON_RENDERER_H
 #define NEON_RENDERER_H
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+#define NEON_INIT_GL
+#define NEON_DEBUG_GL
 #include "neon_GL.h"
+
 #include "neon_math.h"
 #include "neon_platform.h"
 #include "neon_texture.h"
-#include <string.h> // memcpy
+#include <cstring> // memcpy
 
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 //
 //	NOTE:
-//	- This renderer follows left-hand coordinate system.
+//	- Follow left-handed coordinate system.
 //	
-//	- Clock-wise winding order represent triangle's front.
-//	
-//	- When rendering through OpenGL left-handed coordinate system
-//		is simulated. 
+//	- Clock-wise vertex winding = triangle's front.
+//	 
 //
 //		+Y
 //		|
@@ -43,8 +48,8 @@
 //
 //
 
-// Rectangle vertex data
-struct quad
+// Quad vertex data
+struct texture_quad
 {
 	GLfloat Content[54];
 };
@@ -53,14 +58,22 @@ struct color_quad
 	GLfloat Content[42];
 };
 
-quad Qaud(vec2 Origin, vec2 Size, vec4 UVCoords);
+texture_quad TextureQuad(vec2 Origin, vec2 Size, vec4 Color = vec4(1.0f, 1.0f, 1.0f, 1.0f), vec4 UVCoords = vec4(0.0f, 0.0f, 1.0f, 1.0f));
 color_quad ColorQuad(vec2 Origin, vec2 Size, vec4 Color);
+
+// Line data
+struct line_3d
+{
+	// 2 vertex 
+	// 1 Vertex data = Pos(3 floats) + Color (4 floats) = 7 Floats
+	GLfloat Content[14];
+};
 
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 ////
 ////	memory buffer
-////	General purpose memory buffer
+////
 struct mem_buffer
 {
 	u32 MemAvailable;
@@ -79,18 +92,18 @@ struct mem_buffer
 class shader
 {
 public:
-	GLuint Vs;
-	GLuint Fs;
 	GLuint Program;
 	bool ProgramAvailable;
 
-	void CreateProgramFromFiles(read_file_result *VsFile, read_file_result *FsFile);
+	void CreateProgram(read_file_result *VsFile, read_file_result *FsFile);
 
 	shader();
 	~shader();
-};
 
-void CreateShader(shader *Shader, read_file_result *VsFile, read_file_result *FsFile);
+private:
+	GLuint Vs;
+	GLuint Fs;
+};
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
@@ -108,34 +121,13 @@ u16 TextureManager(tex_command Command, u16 TexUnit = -1);
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
 ////
-////	Rectangle Batch
+////	Quad Batch
 ////
-enum batch_type
+enum quad_type
 {
-	QUAD,
-	COLOR_QUAD,
-	MESH
+	TEXTURE_QUAD,
+	COLOR_QUAD
 };
-
-// struct quad_batch
-// {
-// 	GLuint VBO;
-// 	GLuint VAO;
-// 	GLuint Tex;
-// 	shader Shader;	
-// 	u16	TexUnit;
-	
-// 	mem_buffer Buffer;
-	
-// 	batch_type Type;
-	
-// 	b32 GPUBufferAvailable;
-// 	b32 ShaderAvailable;
-// 	b32 TextureAvailable;
-// 	u32 QuadCount;
-
-// 	mat4 Proj;
-// };
 
 class quad_batch
 {
@@ -144,26 +136,28 @@ public:
 	GLuint 	VAO;
 	GLuint 	TEX;
 	
-	shader 	Shader;	
+	shader 	*Shader;	
 	u16		TextureUnit;
 
 	u32 	QuadCount;
 	
 	mem_buffer Buffer;
 	
-	batch_type QuadType;
+	quad_type QuadType;
 	
 	bool Initialised;
 	bool GPUBufferAvailable;
 	bool ShaderAvailable;
-	bool TextureAvailable;
+	bool TextureSet;
+	bool FlushAfterDraw;
 
-	void Initialise(batch_type aQuadType, u32 BufferSize);
+	void Init(quad_type aQuadType, u32 BufferSize, bool AutoFlush  = true);
 	void SetTexture(texture *Texture);
 	void SetShader(shader *aShader);
-	void PushQuad(quad *Quad);
+	void PushQuad(texture_quad *Quad);
 	void PushQuad(color_quad *Quad);
 	void Draw();
+	void Flush();
 
 	quad_batch();
 	~quad_batch();
@@ -171,18 +165,44 @@ public:
 private:
 	void CreateGPUBuffer();
 	void UpdateGPUBuffer();
-	void Flush();
 };
 
-// void InitQuadBatch(quad_batch *QuadBatch, batch_type Type, u32 BufferSize);
-// void SetBatchTexture(quad_batch *QuadBatch, texture *Texture);
-// void SetBatchShader(quad_batch *QuadBatch, shader *_Shader);
-// void CreateGPUBuffer(quad_batch *QuadBatch);
-// void UpdateGPUBuffer(quad_batch *QuadBatch);
-// void PushQuad(quad_batch *QuadBatch, quad *Quad);
-// void PushQuad(quad_batch *QuadBatch, color_quad *Quad);
-// void DrawQuadBatch(quad_batch *QuadBatch);
-// void FlushBatch(quad_batch *QuadBatch);
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+////
+////	Line Batch
+////
+class line_batch
+{
+public:
+	GLuint 	VBO;
+	GLuint 	VAO;
+	
+	shader 	*Shader;
+
+	u32 	LineCount;
+	
+	mem_buffer Buffer;
+
+	bool Initialised;
+	bool GPUBufferAvailable;
+	bool ShaderAvailable;
+	bool FlushAfterDraw;
+
+	void Init(u32 BufferSize, bool AutoFlush  = true);
+	void SetShader(shader *aShader);
+	void PushLine(vec3 Start, vec3 End, vec4 Color);
+	void PushLine(vec3 Start, r32 Radian, u32 Length, vec4 Color);
+	void Draw();
+	void Flush();
+
+	line_batch();
+	~line_batch();
+
+private:
+	void CreateGPUBuffer();
+	void UpdateGPUBuffer();
+};
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
@@ -191,19 +211,16 @@ private:
 ////
 struct glyph
 {
-	s32  BitmapWidth;
-	s32  BitmapHeight;
+	s32 	Width;
+	s32 	Height;
 
-	s32  HoriBearingX;
-	s32  HoriBearingY;
-	s32  HoriAdvance;
+	s32  	HoriBearingX;
+	s32  	HoriBearingY;
+	s32  	HoriAdvance;
+
+	s32		Hang;
 
 	texture_coordinates Coordinates;
-
-	// currently unused
-	s32  VertBearingX;
-	s32  VertBearingY;
-	s32  VertAdvance;
 };
 
 class font
@@ -215,7 +232,7 @@ public:
 	bool 	Initialised;
 
 	void Load(char const * FontSrc, u16 aFontHeight);
-
+	void FreeMemory();
 	font();
 	~font();
 };
@@ -227,20 +244,32 @@ public:
 	font *Font;
 	bool FontSet;
 
-	void SetFont(font *aFont);
-	void PushText(char const *Text, int X, int Y);
+	vec2 Pen;
+
+	void SetFont(font *aFont, u32 BufferSize);
+	void PushText(vec2 Origin, vec4 Color, char const *Fmt, ...);
 	void Draw();
+	void Flush();
 
 	text_batch();
 	~text_batch();
 };
+
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
 ////
 ////	Renderer functions
 //// 
+struct render_resources
+{
+	shader  *TextShader;
+	font 	*HUDFont;
+} RenderResources;
+
+// void InitRenderResources();
+
 void InitRenderer();
-void BackBufferFlush();
+void ClearBackBuffer();
 
 #endif

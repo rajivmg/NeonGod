@@ -1,15 +1,30 @@
 @echo off
 
-set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -W4 -wd4201 -wd4100 -wd4189 -wd4505 -DDEBUG_BUILD=1 -DOPENGL=1 -D_CRT_SECURE_NO_WARNINGS -FC -Z7 -I ../neongod/include
-set CommonLinkerFlags=-opt:ref user32.lib gdi32.lib opengl32.lib SDL2main.lib SDL2.lib freetypeMTd.lib
-REM freetypeMTd.lib
+REM Source files
+set SourceDir=..\neongod\code\
 
-IF NOT EXIST ..\..\build mkdir ..\..\build
-pushd ..\..\build
+REM set Sources=%SourceDir%neon_sdl.cpp 
 
-REM 32-bit build
-REM cl  %CommonCompilerFlags%..\neongod\code\neon_sdl.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags%
+REM 		^%SourceDir%neon_texture.cpp
+REM 		%SourceDir%neon_renderer.cpp ^
+REM			%SourceDir%neon_math.cpp ^
 
-REM 64-bit build
-cl  %CommonCompilerFlags% ..\neongod\code\neon_sdl.cpp /link /libpath:../neongod/lib/x64 %CommonLinkerFlags%
+REM Build directory
+set BuildDir=..\..\build
+
+REM Comiler Settings
+set Macros=-DDEBUG_BUILD=1 ^
+		   -D_CRT_SECURE_NO_WARNINGS
+set DisabledWarnings=-wd4201 -wd4100 -wd4189 -wd4505
+set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -W4 %DisabledWarnings% %Macros% -FC -Z7 -I ../neongod/include
+set CommonLinkerFlags=-incremental:no -opt:ref opengl32.lib SDL2main.lib SDL2.lib freetypeMTd.lib
+
+REM Build
+IF NOT EXIST %BuildDir% mkdir %BuildDir%
+pushd %BuildDir%
+
+REM 64-bit
+cl  %CommonCompilerFlags% %SourceDir%neon_game.cpp -LD /link -incremental:no -opt:ref /libpath:..\neongod\lib\x64 freetypeMTd.lib opengl32.lib -EXPORT:GameCodeLoaded -EXPORT:GameUpdateAndRender
+cl  %CommonCompilerFlags% %SourceDir%neon_sdl.cpp /link /libpath:..\neongod\lib\x64 %CommonLinkerFlags%
+
 popd

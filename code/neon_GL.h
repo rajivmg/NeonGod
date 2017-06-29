@@ -72,8 +72,28 @@ GLDEBUGPROCLIST
 
 // extern gl_type_UseProgram *glUseProgram;
 
-#ifdef NEON_INIT_GL
- 
+#ifdef NEON_DEBUG_GL
+GL_DEBUG_PROC(OpenGLDebugCallback)
+{
+	char *Message = (char *)message;
+	GL_Assert(!"OpenGL Debug Error");
+}
+
+void EnableGLDebug()
+{
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(&OpenGLDebugCallback, 0);
+}
+
+void DisableGLDebug()
+{
+	glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+}
+#endif //NEON_DEBUG_GL
+
+
+
+#ifdef NEON_INIT_GL 
 #define GLPROC(Ret, Name, ...) gl_type_##Name *gl##Name;
 GLPROCLIST
 GLDEBUGPROCLIST
@@ -95,30 +115,15 @@ GLDEBUGPROCLIST
 // glUseProgram = (gl_type_UseProgram *)wglGetProcAddress("glUseProgram");
 
 #endif //_MSC_VER
-return true;
-}
-#endif //NEON_GL_LOADER
 
 #ifdef NEON_DEBUG_GL
-GL_DEBUG_PROC(OpenGLDebugCallback)
-{
-	char *Message = (char *)message;
-	GL_Assert(!"OpenGL Debug Error");
-}
-
-void EnableGLDebug()
-{
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(&OpenGLDebugCallback, 0);
-}
-
-void DisableGLDebug()
-{
-	glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-}
-#else
-	void EnableGLDebug() {}
-	void DisableGLDebug() {}
+EnableGLDebug();
 #endif //NEON_DEBUG_GL
+
+return true;
+}
+#endif //NEON_INIT_GL
+
+
 
 #endif //NEON_GL_H

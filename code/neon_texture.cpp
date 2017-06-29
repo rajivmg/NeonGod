@@ -13,10 +13,16 @@ texture::texture()
 
 texture::~texture()
 {
-	//SAFE_FREE(Content);
 }
 
-// @NOTE: image row start with bottom left and end with top right.
+/**
+ * texture::LoadFromFile
+ * 
+ * purpose: Load texture data from disk into the texture object.
+ * 
+ * description: Considers the first byte of the texture data(on disk) as
+ *				very first top left pixel of the texture. 
+ */
 void texture::LoadFromFile(char const *Filename)
 {
 	read_file_result Data = Platform->ReadFile(Filename);
@@ -54,27 +60,8 @@ void texture::LoadFromFile(char const *Filename)
 		u32 A = (*Pixel & 0xFF000000);// >> 24;
 		*Pixel = R | G | B | A;
 	}
-	
-	Convention = BOTTOM_LEFT_ZERO;
+
 	Initialised = true;
-	
-	// Test if the rows starts from top left or bottom left
-	// @NOTE: The image descriptor bits are maybe incorrect in GIMP exported TGA file.
-	//
-	// u8 ImageDescriptor = *(u8 *)(InBytes + 17);
-	// if((ImageDescriptor & 1<<5) == 0x20)
-	// {
-	// 	Result->VFliped = false;
-	// }
-	// else
-	// {
-	// 	Result->VFliped = true;
-	// }
-	//
-	// if((ImageDescriptor & 1<<4) == 0x10)
-	// {
-	// 	Assert(!"Color within row start with the right side & end with left side");
-	// } 
 }
 
 void texture::FlipVertically()
@@ -94,15 +81,6 @@ void texture::FlipVertically()
 	}
 
 	free(Data);
-
-	if(Convention == TOP_LEFT_ZERO)
-	{
-		Convention = BOTTOM_LEFT_ZERO;
-	}
-	else
-	{
-		Convention = TOP_LEFT_ZERO;
-	}
 }
 
 void texture::FreeMemory()
@@ -116,14 +94,17 @@ void texture::FreeMemory()
 ////
 ////	Texture debugging functions
 ////
+
+/**
+ * DebugTextureSave
+ *
+ * purpose: Save the texture objects as .tga file on disk
+ *
+ * description: Considers the first byte of the texture->content as very
+ *				first top left pixel of the texture. 
+ */
 void DebugTextureSave_(char const * Filename, texture *Texture)
 {	
-	if(Texture->Convention == BOTTOM_LEFT_ZERO)
-	{
-		Texture->FlipVertically();
-		// FlipTextureVertically(Texture);
-	}
-
 	tga_header Header = {};
 
 	Header.IDLength = 0;       
@@ -176,7 +157,6 @@ texture_atlas::texture_atlas()
 
 texture_atlas::~texture_atlas()
 {
-
 }
 
 void texture_atlas::Initialise(u32 AtlasWidth, u32 AtlasHeigth, u16 AtlasPadding)
@@ -252,9 +232,9 @@ static binary_t_node* Atlas_Insert(binary_t_node *Node, texture *Texture, u32 Pa
 		{
 			Node->Filled = true;
 
-			Platform->Log(INFO, "Node O_x=%d O_y=%d W=%d H=%d\n", Node->Rect.OriginX,Node->Rect.OriginY,
+			/*Platform->Log(INFO, "Node O_x=%d O_y=%d W=%d H=%d\n", Node->Rect.OriginX,Node->Rect.OriginY,
 														Node->Rect.Width, Node->Rect.Height);
-
+			*/
 			return Node;
 		}
 
@@ -311,11 +291,6 @@ texture_coordinates texture_atlas::PackTexture(texture *Texture)
 {
 	Assert(Initialised == true);
 
-	if(Texture->Convention == BOTTOM_LEFT_ZERO)
-	{
-		Texture->FlipVertically();
-	}
-
 	binary_t_node *NodeSlot = Atlas_Insert(&Node, Texture, Padding);
 
 	if(NodeSlot == 0)
@@ -325,17 +300,17 @@ texture_coordinates texture_atlas::PackTexture(texture *Texture)
 
 	texture_coordinates TCoord;
 
-	TCoord.BL_X = ((r32)NodeSlot->Rect.OriginX - 1) / (Width - 1);
-	TCoord.BL_Y = ((r32)NodeSlot->Rect.OriginY + NodeSlot->Rect.Height - 3) / (Height - 1);
-	TCoord.TR_X = ((r32)NodeSlot->Rect.OriginX + NodeSlot->Rect.Width - 3) / (Width - 1);
-	TCoord.TR_Y = ((r32)NodeSlot->Rect.OriginY - 1) / (Height - 1);
+	TCoord.BL_X = (r32)(NodeSlot->Rect.OriginX - 1.5) / (r32)(Width - 1);
+	TCoord.BL_Y = (r32)(NodeSlot->Rect.OriginY + NodeSlot->Rect.Height - Padding - 1.5) / (r32)(Height - 1);
+	TCoord.TR_X = (r32)(NodeSlot->Rect.OriginX + NodeSlot->Rect.Width - Padding - 1.5) / (r32)(Width - 1);
+	TCoord.TR_Y = (r32)(NodeSlot->Rect.OriginY - 1.5) / (r32)(Height - 1);
 
 	// Platform->Log(INFO, "BL_x=%f BL_y=%f TR_x=%f TR_y=%f\n", TCoord.BL_X, TCoord.BL_Y, TCoord.TR_X, TCoord.TR_Y);
 
 	// copy the texture on the atlas at its position
-	// 	x and y in range [1, width or height]
-	//	to be written in range [0, Width or height - 1]
-	//	write_at(x, y) = (u32)content_ptr + (x-1) + ((y-1) * width)
+	// x and y in range [1, width or height]
+	// needs to be written in range [0, Width or height - 1]
+	// write_at(x, y) = (u32)content_ptr + (x-1) + ((y-1) * width)
 	u32 *pTextureContent = (u32 *)Texture->Content;
 	
 	for(u32 y = NodeSlot->Rect.OriginY; y < NodeSlot->Rect.OriginY + NodeSlot->Rect.Height - Padding; ++y)
@@ -350,14 +325,6 @@ texture_coordinates texture_atlas::PackTexture(texture *Texture)
 	
 	// Debugging purpose
 	// texture AtlasDebugCopy;
-
-	// AtlasDebugCopy.Width = Width;
-	// AtlasDebugCopy.Height = Height;
-	// AtlasDebugCopy.ContentSize = ContentSize;
-	// AtlasDebugCopy.Content = malloc(ContentSize);
-	// memcpy(AtlasDebugCopy.Content, Content, ContentSize);
-	// AtlasDebugCopy.Convention = TOP_LEFT_ZERO;
-
 	// AtlasDebugCopy = this->ToTexture();
 	// DebugTextureSave("FontAtlas.tga", &AtlasDebugCopy);
 
@@ -372,8 +339,6 @@ void texture_atlas::FreeMemory()
 
 texture texture_atlas::ToTexture()
 {
-	// texture *Texture = (texture *)malloc(sizeof(texture));
-	// texture *Texture = new texture();
 	texture Texture;
 
 	Texture.Width  = Width;
@@ -381,7 +346,6 @@ texture texture_atlas::ToTexture()
 	Texture.ContentSize = ContentSize;
 	Texture.Content = malloc(ContentSize);
 	memcpy(Texture.Content, Content, ContentSize);
-	Texture.Convention = TOP_LEFT_ZERO;
 	Texture.Initialised = true;
 	
 	return Texture;
